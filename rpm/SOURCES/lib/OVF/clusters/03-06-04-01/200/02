@@ -1,0 +1,45 @@
+--prop:"host"="distribution=CentOS major=6 minor=4 architecture=x86_64 cluster=200 instance=2" \
+--prop:"network"="hostname=cae-qa-base domain=sc.steeleye.com" \
+--prop:"steeleye"="product=sps prerequisites=y packages-32bit=n setup=n" \
+--prop:"network.resolv"="search=sc.steeleye.com,sc6.steeleye.com,steeleye.com nameservers=172.17.4.60,172.17.4.1,172.17.100.75,2001:5c0:110e:3300::1" \
+--prop:"network.gateway"="ipv4=172.17.107.254 ipv6=2001:5c0:110e:3368:254" \
+--prop:"network.if"="if=1 label=se0 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5c0:110e:3368::69:3c ipv6-prefix=64 ;; if=2 label=se1 ipv4=10.1.0.60 ipv4-prefix=24 ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0" \
+--prop:"network.alias"="if=2 label=1 ipv4=10.2.0.60 ipv4-prefix=24" \
+--prop:"network.bond"="label=bond0 if-slaves=3,4 ipv4=10.3.0.60 ipv4-prefix=24" \
+--prop:"host.locale"="change=n lang=EN|DE|KR|JP" \
+--prop:"host.updates"="enabled=n" \
+--prop:"steeleye.setup-args"="-u jcrocker -v 8.2.0 --arks dmmp nfs dr" \
+--prop:"steeleye.erase-args"="" \
+--prop:"steeleye.automation"="setup=y" \
+--prop:"service.security.apparmor"="enabled=n syslog-emerg=y" \
+--prop:"service.security.selinux"="enabled=n" \
+--prop:"service.security.firewall"="enabled=n" \
+--prop:"service.security.sshd"="permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y" \
+--prop:"service.security.pam.ldap"="packages=n enabled=n server=ldap.sc.steeleye.com basedn=dc%3Dsteeleye,dc%3Dcom" \
+--prop:"service.report.syslog"="enabled=y server=syslogs.sc.steeleye.com" \
+--prop:"service.report.snmp"="packages=y enabled=y community=defCommunity%20sessnmp" \
+--prop:"service.time.ntp"="packages=y enabled=y server=ntp1.sc.steeleye.com" \
+--prop:"service.app.apache"="" \
+--prop:"service.app.mq"="" \
+--prop:"service.app.nfs"="packages=n enabled=n version=4 storage-device=/dev/mapper/mapthap1 data-directory=/srv/fvorge-nfs fs-type=ext3 clear-storage=n virtualip=cae-qa-r113.sc.steeleye.com virtualip-prefix=22 virtualip-if=se1" \
+--prop:"service.app.postfix"="" \
+--prop:"service.app.samba"="packages=n enabled=n confpath=/etc/samba/fvorge-samba-a.conf lockpath=/var/run/samba/fvorge-locks-a logpath=/var/log/fvorge-samba-a pidpath=/var/run/samba/fvorge-pid-a sharepath=/srv/fvorge-samba-share-a netbiosname=FVORGE-SAMBA-A workgroup=FVORGE-QA sharename=fvorge-share-a storage-device=/dev/mapper/mpathdp1 clear-storage=y virtual-ip=cae-qa-r116.sc.steeleye.com virtualip-prefix=22 virtualip-if=se1" \
+--prop:"service.app.sap"="" \
+--prop:"service.database.db2"="" \
+--prop:"service.database.mysql"="packages=n enabled=n database-directory=/srv/fvorge-mysql port=3306 storage-device=/dev/mapper/mpathbp1 fs-type=ext3 virtualip=cae-qa-r114.sc.steeleye.com virtualip-prefix=22 virtualip-if=se1" \
+--prop:"service.database.oracle"="enabled=n" \
+--prop:"service.database.postgresql"="packages=n enabled=n database-directory=/srv/fvorge-pgsql port=5432, storage-device=/dev/mapper/mpathcp1 clear-storage=y initdb=y virtualip=cae-qa-r115.sc.steeleye.com virtualip-prefix=22 virtualip-if=se1" \
+--prop:"service.database.sapdb"="enabled=n virtaulip=cae-qa-r117.sc.steeleye.com virtualip-prefix=22 virtaulip-if=se1" \
+--prop:"service.database.sybase"="packages=n enabled=n" \
+--prop:"service.graphic.xserver"="packages=y" \
+--prop:"service.storage.iscsi"="packages=y enabled=y portal=iscsi.sc.steeleye.com initiatorname=iqn.2013-01.com.steeleye.qa.init:00-00-00-00-000-## targetiqn=iqn.2013-01.com.steeleye.qa.target:00-00-00-00-000" \
+--prop:"service.storage.multipath"="packages=y enabled=y" \
+--prop:"service.storage.md"="" \
+--prop:"storage.fs"="" \
+--prop:"storage.lvm"="" \
+--prop:"storage.md"="" \
+--prop:"custom.network"="" \
+--prop:"custom.packages"="" \
+--prop:"custom.host-services"="" \
+--prop:"custom.storage"="" \
+--prop:"custom.app-services"="" \

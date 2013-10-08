@@ -1,0 +1,17 @@
+#ident	"%W%"
+# Copyright 2000 SteelEye Technology Inc. - Mountain View, CA, USA
+#
+# This macros file is used to customize rpm for the LK linux build environment
+#
+#############################################################################
+# Linux CHANGE LOG:
+# MR           Who   Date       Description
+# ==           ===   ====       ===========
+# lklin000065  caa   02/24/00   Initial file creation
+#######################end CHANGE LOG########################################
+
+# Set the rpm top-level directory
+%_topdir %(echo $ROOT)/rpm 
+%_prefix0 %(echo) 
+%_prefix1 /opt/LifeKeeper
+%__perl_requires	%(echo $ROOT)/rpm/config/lkperl.req

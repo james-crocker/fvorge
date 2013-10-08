@@ -1,0 +1,16 @@
+#ident	"%W%"
+# Copyright 2000 SteelEye Technology Inc. - Mountain View, CA, USA
+#
+# This rpmrc file calls the macros file in the current directory
+#
+#############################################################################
+# Linux CHANGE LOG:
+# MR           Who   Date       Description
+# ==           ===   ====       ===========
+# lklin000065  caa   02/24/00   Initial file creation
+# lklin001137  caa   08/23/00	Made corrections so that the packages can be
+# 				built on RedHat 6.2 as well as 6.1 
+#######################end CHANGE LOG########################################
+
+# Call the macros file in the current directory
+macrofiles:     /usr/lib/rpm/macros:/usr/lib/rpm/%{_target}/macros:/etc/rpm/macros:/etc/rpm/%{_target}/macros:~/.rpmmacros:%(echo $ROOT)/rpm/config/macros

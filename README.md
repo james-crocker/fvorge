@@ -1,4 +1,4 @@
-fvorge
+FVORGE
 ======
 
-Open Virtualization Format (OVF) Configuration and Management
+Open Virtualization Format (OVF) configuration and management utility that forges virtual appliances from scratch.

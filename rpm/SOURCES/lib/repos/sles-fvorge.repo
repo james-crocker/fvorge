@@ -1,0 +1,8 @@
+[fvorge]
+name="FVORGE Repository"
+baseurl=http://fvorge.us.sios.com/~fvorge/latest
+enabled=0
+gpgcheck=0
+autorefresh=0
+type=rpm-md
+keeppackages=0
