@@ -128,7 +128,7 @@ install -m 0750 ${RPMSRCDIR}/bin/sp-setup.pl $RPM_BUILD_ROOT%{fvorgedir}/bin/sp-
 
 install -m 0750 ${RPMSRCDIR}/etc/init.d/fvorge.sh $RPM_BUILD_ROOT/etc/init.d/fvorge
 
-install -m 0644 ${RPMSRCDIR}/lib/OVF/ovf-defaults.xml $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/ovf-defaults.xml
+install -m 0644 ${RPMSRCDIR}/lib/OVF/example-ovf-defaults.xml $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/example-ovf-defaults.xml
 install -m 0644 ${RPMSRCDIR}/lib/OVF/fvorge-ovf-snippet.xml $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/fvorge-ovf-snippet.xml
 install -m 0644 ${RPMSRCDIR}/lib/OVF/clusters/03-06-04-01/200/01 $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200/01
 install -m 0644 ${RPMSRCDIR}/lib/OVF/clusters/03-06-04-01/200/02 $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200/02
@@ -253,7 +253,6 @@ install -m 0750 ${RPMSRCDIR}/lib/VMware/install-tools/sles11sp1.sh $RPM_BUILD_RO
 install -m 0750 ${RPMSRCDIR}/lib/VMware/install-tools/sles11sp2.sh $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/install-tools/sles11sp2
 install -m 0644 ${RPMSRCDIR}/lib/VMware/install-tools/keys/VMWARE-PACKAGING-GPG-DSA-KEY.pub $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/install-tools/keys/VMWARE-PACKAGING-GPG-DSA-KEY.pub
 install -m 0644 ${RPMSRCDIR}/lib/VMware/install-tools/keys/VMWARE-PACKAGING-GPG-RSA-KEY.pub $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/install-tools/keys/VMWARE-PACKAGING-GPG-RSA-KEY.pub
-#install -m 0644 ${RPMSRCDIR}/lib/VMware/ovf-defaults.xml $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/ovf-defaults.xml
 install -m 0750 ${RPMSRCDIR}/lib/VMware/contrib/remove_vm.pl $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/contrib/.
 install -m 0750 ${RPMSRCDIR}/lib/VMware/contrib/remove_vm.pl $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/contrib/remove_vm.pl
 install -m 0750 ${RPMSRCDIR}/lib/VMware/contrib/vmISOManagement.pl $RPM_BUILD_ROOT%{fvorgedir}/lib/VMware/contrib/vmISOManagement.pl
