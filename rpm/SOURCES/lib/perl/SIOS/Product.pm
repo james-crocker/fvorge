@@ -1195,7 +1195,7 @@ sub copyLicenses ( \% ) {
 				SIOS::Logger::logIt( $verbosity, $parentCaller, 4, 'result', qq{completed \n} );
 
 				## Handle vAppKeeper seperately since core/bundle are a bit different...
-				if ( $product =~ /^vapp$/ ) {
+				if ( $product =~ /^vapp|lkssp$/ ) {
 					SIOS::Logger::logIt( $verbosity, $parentCaller, 3, 'print',  qq{KIT LICENSE $SIOS::CommonVars::product{$product}{name} REQUESTED. KIT $eachKit INCLUDES 'CORE' ... \n} );
 					SIOS::Logger::logIt( $verbosity, $parentCaller, 3, 'action', qq{REMOVE $licCore ... } );
 					system( qq{$rmCmd $licPath/$licCore*$quietCmd} ) == 0 or SIOS::Logger::logIt( $verbosity, $parentCaller, 4, 'die', qq{ERROR: Couldn't $rmCmd $licPath/$licCore* ($?:$!) \n} );
@@ -1213,7 +1213,7 @@ sub copyLicenses ( \% ) {
 			SIOS::Logger::logIt( $verbosity, $parentCaller, 4, 'result', qq{completed \n} );
 
 			## Handle vAppKeeper seperately since core/bundle are a bit different...
-			if ( $product =~ /^vapp$/ ) {
+			if ( $product =~ /^vapp|lkssp$/ ) {
 				SIOS::Logger::logIt( $verbosity, $parentCaller, 3, 'print',  qq{KIT LICENSE $SIOS::CommonVars::product{$product}{name} REQUESTED. KIT $licKit INCLUDES 'CORE' ... \n} );
 				SIOS::Logger::logIt( $verbosity, $parentCaller, 3, 'action', qq{REMOVE $licCore ... } );
 				system( qq{$rmCmd $licPath/$licCore*$quietCmd} ) == 0 or SIOS::Logger::logIt( $verbosity, $parentCaller, 4, 'die', qq{ERROR: Couldn't $rmCmd $licPath/$licCore* ($?:$!) \n} );
