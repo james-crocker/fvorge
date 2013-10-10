@@ -59,8 +59,8 @@ our %build = (
 		},
 
 		lkssp => {
-			corePath => 'vAppKeeper',
-			kitsPath => 'vAppKeeper'
+			corePath => 'lkssp',
+			kitsPath => 'lkssp'
 		},
 
 		ora => {
