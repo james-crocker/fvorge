@@ -1,0 +1,14 @@
+# qe_auto batch main configuration file
+#
+# this file defines the settings for the automation batch file to use
+#
+
+systems = v118, v119, v120, v121
+distribution = CentOS
+major = 6
+minor = 4
+architecture = x86_64
+group = 200
+instances = 1, 2, 3, 4
+targethosts = c9.sc.sios.com, c10.sc.sios.com, c8.sc.sios.com, c14.sc.sios.com
+targetdatastores = c9-local2, c10-local2, c8-local, c14-local

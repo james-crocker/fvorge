@@ -60,6 +60,7 @@ install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/02-11-02-01
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/02-11-02-01
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-05-09-01
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200
+install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/fvorge-deploy-examples
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/perl
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/perl/Linux
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/perl/Linux/Perl\ Licensing\ -\ dev.perl.org_files
@@ -132,6 +133,10 @@ install -m 0644 ${RPMSRCDIR}/lib/OVF/example-ovf-defaults.xml $RPM_BUILD_ROOT%{f
 install -m 0644 ${RPMSRCDIR}/lib/OVF/fvorge-ovf-snippet.xml $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/fvorge-ovf-snippet.xml
 install -m 0644 ${RPMSRCDIR}/lib/OVF/clusters/03-06-04-01/200/01 $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200/01
 install -m 0644 ${RPMSRCDIR}/lib/OVF/clusters/03-06-04-01/200/02 $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200/02
+install -m 0644 ${RPMSRCDIR}/lib/OVF/clusters/03-06-04-01/200/02 $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200/03
+install -m 0644 ${RPMSRCDIR}/lib/OVF/clusters/03-06-04-01/200/02 $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/clusters/03-06-04-01/200/04
+install -m 0644 ${RPMSRCDIR}/lib/OVF/fvorge-deploy-examples/batch_4node.cf $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/fvorge-deploy-examples/batch_4node.cf
+install -m 0750 ${RPMSRCDIR}/lib/OVF/fvorge-deploy-examples/batch-fvorge.pl $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF/fvorge-deploy-examples/batch-fvorge
 
 install -m 0640 ${RPMSRCDIR}/lib/perl/Linux/Distribution.pm $RPM_BUILD_ROOT%{fvorgedir}/lib/perl/Linux/Distribution.pm
 

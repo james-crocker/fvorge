@@ -1,11 +1,11 @@
---prop:"host"="distribution=CentOS major=6 minor=4 architecture=x86_64 cluster=200 instance=2" \
---prop:"network"="hostname=v119 domain=sc.sios.com" \
+--prop:"host"="distribution=CentOS major=6 minor=4 architecture=x86_64 cluster=200 instance=4" \
+--prop:"network"="hostname=v121 domain=sc.sios.com" \
 --prop:"sios"="product=sps prerequisites=y packages-32bit=n setup=n" \
 --prop:"network.resolv"="search=sc.sios.com,sc6.sios.com,sios.com nameservers=192.168.4.60,192.168.4.1,192.168.100.75,3001:4af3:201c:3300::1" \
 --prop:"network.gateway"="ipv4=192.168.107.254 ipv6=3001:4af3:201c:3368:254" \
---prop:"network.if"="if=1 label=se0 ipv4=192.168.105.253 ipv4-prefix=22 ipv6=3001:4af3:201c:3368::69:fb ipv6-prefix=64 ;; if=2 label=se1 ipv4=10.1.0.61 ipv4-prefix=24 ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0" \
---prop:"network.alias"="if=2 label=1 ipv4=10.2.0.61 ipv4-prefix=24" \
---prop:"network.bond"="label=bond0 if-slaves=3,4 ipv4=10.3.0.61 ipv4-prefix=24" \
+--prop:"network.if"="if=1 label=se0 ipv4=192.168.105.253 ipv4-prefix=22 ipv6=3001:4af3:201c:3368::69:fd ipv6-prefix=64 ;; if=2 label=se1 ipv4=10.1.0.63 ipv4-prefix=24 ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0" \
+--prop:"network.alias"="if=2 label=1 ipv4=10.2.0.63 ipv4-prefix=24" \
+--prop:"network.bond"="label=bond0 if-slaves=3,4 ipv4=10.3.0.63 ipv4-prefix=24" \
 --prop:"host.locale"="change=n lang=EN|DE|KR|JP" \
 --prop:"host.updates"="enabled=n" \
 --prop:"sios.setup-args"="-u jcrocker -v 8.2.0 --arks dmmp nfs dr" \
