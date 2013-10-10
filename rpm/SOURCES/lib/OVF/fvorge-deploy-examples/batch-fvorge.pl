@@ -21,7 +21,9 @@ use lib "../libs";
 use POSIX;
 use strict;
 use warnings;
-use ConfigFile;
+
+## INSTALL PERL ConfigFile and UNCOMMENT use;
+#use ConfigFile;
 
 sub usage() {
 	printf STDERR "\nUsage: %s <my_batch.cf> deploy|destroy\n", basename( $0 );
