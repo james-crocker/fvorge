@@ -49,7 +49,7 @@ sub create ( \%\% ) {
 	my $myAddCmd = $addCmd;
 	foreach my $group ( keys %ovfObject ) {
 		$myAddCmd =~ s/<GID>/$ovfObject{$group}{gid}/;
-		Sys::Syslog::syslog( 'info', qq{$myAddCmd $group ...} );
+		Sys::Syslog::syslog( 'info', qq{$action $myAddCmd $group ...} );
 		system( qq{$myAddCmd $group $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action WARNING: Couldn't ($myAddCmd $group) ($?:$!)} );
 		$myAddCmd = $addCmd;
 
