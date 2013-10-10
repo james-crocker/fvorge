@@ -93,8 +93,8 @@ foreach my $productKey ( keys %{SIOS::CommonVars::product} ) {
 			}
 			
 			case 'lkssp' {
-				$type{$productKey}{$productVersion}{core} = 'vAppKeeper_';
-				$type{$productKey}{$productVersion}{kits} = { bundle => 'vAppKeeper-bundle_' };
+				$type{$productKey}{$productVersion}{core} = 'lkssp_';
+				$type{$productKey}{$productVersion}{kits} = { bundle => 'lkssp-bundle_' };
 			}
 
 			case 'ora' {
