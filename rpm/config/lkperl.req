@@ -85,7 +85,7 @@ sub process_file {
   # crockerj SIOS 2012-06-26 SKIP VMWare Perl SDK files since the use|require bungles up the build dependencies
   # tried with RPM_Provides but it doesn't look like this config parser recognizes/uses that
 
-  my $skipPathRegex = 'lib/VMware/contrib|lib/VMware/sdk';
+  my $skipPathRegex = 'lib/VMware/contrib|lib/VMware/sdk|lib/OVF/fvorge-deploy-examples';
   return if ( $file =~ /$skipPathRegex/ );
   
   open(FILE, "<$file") || return;

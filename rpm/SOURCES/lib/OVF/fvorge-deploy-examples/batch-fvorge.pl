@@ -21,9 +21,7 @@ use lib "../libs";
 use POSIX;
 use strict;
 use warnings;
-
-## INSTALL PERL ConfigFile and UNCOMMENT use;
-#use ConfigFile;
+use ConfigFile;
 
 sub usage() {
 	printf STDERR "\nUsage: %s <my_batch.cf> deploy|destroy\n", basename( $0 );
@@ -31,17 +29,17 @@ sub usage() {
 }
 
 my $config      = $ARGV[ 0 ];
-my $ovfDeploy   = 0;
-my $ovfDestroy  = 0;
+my $ovfAction   = '';
 
-if ( ! -e $config or $ARGV[ 1 ] eq '' ) {
+if ( ! -e $config or $ovfAction eq '' ) {
 	usage();
 }
 
-if ( $ARGV[ 1 ] eq 'destroy' ) {
-	$ovfDestroy = 1;
+if ( $ovfAction eq 'destroy' ) {
+	ovfDestroy();
 } else {
-	$ovfDeploy = 1;
+	ovfDestroy();
+	ovfDeploy();
 }
 
 my $vars = ConfigFile::Parse( $config );    # parse the user's batch config
@@ -55,9 +53,6 @@ my $settings = ConfigFile::Settings( $vars );
 my @systems = ConfigFile::Setting( $settings, 'systems' );
 my $systems = join '-', @systems;
 my $variables_file = ConfigFile::Setting( $settings, 'variables_file' );
-
-ovfDestroy() if ( $ovfDestroy );	
-ovfDeploy() if ( $ovfDeploy );
 
 sub ovfDeploy () {
 
