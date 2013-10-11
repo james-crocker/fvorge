@@ -64,7 +64,7 @@ our %product = (
 
 	smc => {
 		name     => 'SteelEye Management Console',
-		versions => [ $productVersionLatest, '7.5.0' ]
+		versions => [ $productVersionLatest, '8.2.0', '7.5.0' ]
 	},
 
 	sps => {

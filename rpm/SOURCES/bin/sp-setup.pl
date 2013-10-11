@@ -125,10 +125,12 @@ if ( $licEvalKits{all} and $licEvalKits{none} ) {
 } elsif ( $licEvalKits{none} and scalar( keys %licEvalKits ) > 1 ) {
 	push( @useError, "--licevalkits all|none|KITS ! : Got (none PLUS KITS)\n" );
 } else {
-	my $licKitList = $SIOS::LicenseVars::kitLicsList{$product}{$version};
-	foreach my $licKit ( keys %licEvalKits ) {
-		if ( scalar( grep ( /^$licKit$/, @{$licKitList} ) ) < 1 ) {
-			push( @useError, "--licevalkits [" . join( ' ', @{$licKitList} ) . "] valid for product '$product' ! : Got ($licKit)\n" );
+	if ( defined $SIOS::LicenseVars::kitLicsList{$product}{$version} ) {
+		my $licKitList = $SIOS::LicenseVars::kitLicsList{$product}{$version};
+		foreach my $licKit ( keys %licEvalKits ) {
+			if ( scalar( grep ( /^$licKit$/, @{$licKitList} ) ) < 1 ) {
+				push( @useError, "--licevalkits [" . join( ' ', @{$licKitList} ) . "] valid for product '$product' ! : Got ($licKit)\n" );
+			}
 		}
 	}
 }
@@ -138,21 +140,26 @@ if ( $arks{all} and $arks{none} ) {
 } elsif ( $arks{none} and scalar( keys %arks ) > 1 ) {
 	push( @useError, "--arks all|none|KITS ! : Got (none PLUS KITS)\n" );
 } else {
-	my $arksList = $SIOS::ArkVars::kitList{$product}{$version};
-	foreach my $kit ( keys %arks ) {
-		next if ( $kit eq 'all' or $kit eq 'none' );
-		if ( scalar( grep ( /^$kit$/, @{$arksList} ) ) < 1 ) {
-			push( @useError, "--arks [" . join( ' ', @{$arksList} ) . "] valid for product '$product' ! : Got ($kit)\n" );
+	if ( defined $SIOS::ArkVars::kitList{$product}{$version} ) {
+		my $arksList = $SIOS::ArkVars::kitList{$product}{$version};
+		foreach my $kit ( keys %arks ) {
+			next if ( $kit eq 'all' or $kit eq 'none' );
+			if ( scalar( grep ( /^$kit$/, @{$arksList} ) ) < 1 ) {
+				push( @useError, "--arks [" . join( ' ', @{$arksList} ) . "] valid for product '$product' ! : Got ($kit)\n" );
+			}
 		}
 	}
 }
 
-if ( $version !~ /$SIOS::CommonVars::product{$product}{versionsRegexPattern}/ ) {
-	push( @useError, "--version #.#.# required. $SIOS::CommonVars::product{$product}{versionsHelp} valid for product '$product' ! : Got ($version)\n" );
-}
+if ( defined $SIOS::CommonVars::product{$product}{versionsRegexPattern} ) {
 
-if (defined( $gaVersion ) and  $gaVersion !~ /$SIOS::CommonVars::product{$product}{versionsRegexPattern}/ ) {
-	push( @useError, "--gaversion #.#.# required. $SIOS::CommonVars::product{$product}{versionsHelp} valid for product '$product' ! : Got ($gaVersion)\n" );
+	if ( $version !~ /$SIOS::CommonVars::product{$product}{versionsRegexPattern}/ ) {
+		push( @useError, "--version #.#.# required. $SIOS::CommonVars::product{$product}{versionsHelp} valid for product '$product' ! : Got ($version)\n" );
+	}
+
+	if ( defined( $gaVersion ) and $gaVersion !~ /$SIOS::CommonVars::product{$product}{versionsRegexPattern}/ ) {
+		push( @useError, "--gaversion #.#.# required. $SIOS::CommonVars::product{$product}{versionsHelp} valid for product '$product' ! : Got ($gaVersion)\n" );
+	}
 }
 
 if ( $build !~ /$SIOS::BuildVars::buildRegexPattern/ ) {
