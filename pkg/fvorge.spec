@@ -48,7 +48,7 @@ RPMSRCDIR=${ROOT}/rpm/SOURCES
 install -m 0750 -d $RPM_BUILD_ROOT/etc
 install -m 0750 -d $RPM_BUILD_ROOT/etc/init.d
 
-install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}
+install -m 0755 -d $RPM_BUILD_ROOT%{fvorgedir}
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/bin
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib
 install -m 0750 -d $RPM_BUILD_ROOT%{fvorgedir}/lib/OVF

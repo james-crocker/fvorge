@@ -312,7 +312,7 @@ sub getMemManaged($$) {
 	}
 
 	if ( $bsBytes <= $bsByteLimit ) {
-		retrun( $askedBs, $askedUnit, 1 );
+		return ( $askedBs, $askedUnit, 1 );
 	} else {
 		$bsCount = floor( $bsBytes / $bsByteLimit );
 		return ( $ddLimitBs, $ddLimitUnit, $bsCount );
