@@ -32,6 +32,7 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 
 ## For surpressing stdout, stderr.
 my $quietCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd};
+my $quietErrCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietErrCmd};
 
 sub run ( \%\@ ) {
 
@@ -46,7 +47,11 @@ sub run ( \%\@ ) {
 
 	foreach my $task ( @ovfObject ) {
 		Sys::Syslog::syslog( 'info', qq{$action $task ... } );
-		$retVal = system( qq{$task $quietCmd} );
+		
+		my $quietCmdChoice = $quietCmd;
+		$quietCmdChoice = $quietErrCmd if ( $task =~ /\>/ );
+			
+		$retVal = system( qq{$task $quietCmdChoice} );
 		if ( $retVal != 0 ) {
 			Sys::Syslog::syslog( 'warning', qq{$action WARNING: Couldn't $task ($?:$!)} );
 			$groupRetVal = 0;	
@@ -73,7 +78,11 @@ sub runExpect ( \$\$\% ) {
 	$expect = 0 if ( !defined $expect or !isdigit( $expect ) );
 
 	Sys::Syslog::syslog( 'info', qq{$action $task (expect $expect) ... } );
-	$retVal = system( qq{$task $quietCmd} );
+	
+	my $quietCmdChoice = $quietCmd;
+	$quietCmdChoice = $quietErrCmd if ( $task =~ /\>/ );
+		
+	$retVal = system( qq{$task $quietCmdChoice} );
 	
 	if ( $retVal != $expect ) {
 		Sys::Syslog::syslog( 'warning', qq{$action WARNING: Couldn't $task ($?:$!)} );

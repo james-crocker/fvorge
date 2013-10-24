@@ -143,13 +143,12 @@ sub decodeURL ( $ ) {
 	#		;		%3B (only if ;; together)
 
 	$item =~ s/\%20/ /g;
-
-	#	$item =~ s/\%3B/\;/g;
+	$item =~ s/\%3B\%3B/\;\;/g;
 	$item =~ s/\%3D/\=/g;
-	$item =~ s/\&quot/\"/g;
-	$item =~ s/\&lt/\</g;
-	$item =~ s/\&gt/\>/g;
-	$item =~ s/\&amp/\&/g;
+	$item =~ s/\&quot;/\"/g;
+	$item =~ s/\&lt;/\</g;
+	$item =~ s/\&gt;/\>/g;
+	$item =~ s/\&amp;/\&/g;
 
 	return $item;
 
@@ -374,8 +373,9 @@ sub parseOvfProperties ( \@ ) {
 							die;
 						}
 
-						$item = normalizeYesNo( $id, decodeURL( $setting ) );
-						$item = normalizeTrueFalse( $id, decodeURL( $setting ) );
+						$item = decodeURL( $setting );
+						$item = normalizeYesNo( $id, $item );
+						$item = normalizeTrueFalse( $id, $item );
 						$ovfPropertyCollection{$key}{$groupCount}{$id} = $item;
 
 					}
@@ -402,13 +402,15 @@ sub parseOvfProperties ( \@ ) {
 						die;
 					}
 
-					$item = normalizeYesNo( $id, decodeURL( $setting ) );
-					$item = normalizeTrueFalse( $id, decodeURL( $setting ) );
+					$item = decodeURL( $setting );
+					$item = normalizeYesNo( $id, $item );
+					$item = normalizeTrueFalse( $id, $item );
 					$ovfPropertyCollection{"$key.$id"} = $item;
 				}
 			} else {
-				my $item = normalizeYesNo( $key, decodeURL( $value ) );
-				$item = normalizeTrueFalse( $key, decodeURL( $value ) );
+				my $item = decodeURL( $value );
+				$item = normalizeYesNo( $key, $item );
+				$item = normalizeTrueFalse( $key, $item );
 				$ovfPropertyCollection{$key} = $item;
 			}
 
