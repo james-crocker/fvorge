@@ -1,5 +1,5 @@
 [fvorge]
 name="FVORGE Repository"
 baseurl=http://ftp.us.sios.com/siostech/fvorge/rpm/latest
-enabled=1
+enabled=0
 gpgcheck=0
