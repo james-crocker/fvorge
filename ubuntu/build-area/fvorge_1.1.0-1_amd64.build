@@ -1,0 +1,55 @@
+ dpkg-buildpackage -rfakeroot -D -us -uc
+dpkg-buildpackage: source package fvorge
+dpkg-buildpackage: source version 1.1.0-1
+dpkg-buildpackage: source changed by Y <j13@us.sios.com>
+ dpkg-source --before-build fvorge-1.1.0
+dpkg-buildpackage: host architecture amd64
+ fakeroot debian/rules clean
+dh clean 
+   dh_testdir
+   dh_auto_clean
+   dh_clean
+ dpkg-source -b fvorge-1.1.0
+dpkg-source: warning: no source format specified in debian/source/format, see dpkg-source(1)
+dpkg-source: info: using source format `1.0'
+dpkg-source: info: building fvorge using existing fvorge_1.1.0.orig.tar.gz
+dpkg-source: info: building fvorge in fvorge_1.1.0-1.diff.gz
+dpkg-source: warning: newly created empty file 'debian/docs' will not be represented in diff
+dpkg-source: info: building fvorge in fvorge_1.1.0-1.dsc
+ debian/rules build
+dh build 
+   dh_testdir
+   dh_auto_configure
+   dh_auto_build
+   dh_auto_test
+ fakeroot debian/rules binary
+dh binary 
+   dh_testroot
+   dh_prep
+   dh_auto_install
+   dh_installdocs
+   dh_installchangelogs
+   dh_pysupport
+dh_pysupport: This program is deprecated, you should use dh_python2 instead. Migration guide: http://deb.li/dhs2p
+   dh_perl
+   dh_link
+   dh_compress
+   dh_fixperms
+   dh_strip
+   dh_makeshlibs
+   dh_shlibdeps
+   dh_installdeb
+   dh_gencontrol
+dpkg-gencontrol: warning: Depends field of package fvorge: unknown substitution variable ${shlibs:Depends}
+   dh_md5sums
+   dh_builddeb
+dpkg-deb: building package `fvorge' in `../fvorge_1.1.0-1_amd64.deb'.
+ dpkg-genchanges  >../fvorge_1.1.0-1_amd64.changes
+dpkg-genchanges: including full source code in upload
+ dpkg-source --after-build fvorge-1.1.0
+dpkg-buildpackage: full upload (original source is included)
+Now running lintian...
+W: fvorge source: ambiguous-paragraph-in-dep5-copyright paragraph at line 5
+W: fvorge: new-package-should-close-itp-bug
+W: fvorge: unknown-section what
+Finished running lintian.
