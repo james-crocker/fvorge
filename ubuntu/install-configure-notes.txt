@@ -1,0 +1,4 @@
+Ubuntu 14.04 beta x86_64
+
+OpenSSH from install
+apt-get install ntp

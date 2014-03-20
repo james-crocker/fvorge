@@ -36,9 +36,7 @@ $common{'RHEL'}{files} = {
 		}
 	}
 };
-$common{'RHEL'}{task}  = {
-		'restart' => [ q{/etc/init.d/rsyslog restart} ]
-};
+$common{'RHEL'}{task} = { 'restart' => [ q{/etc/init.d/rsyslog restart} ] };
 
 $common{'RHEL'}{5}{files} = {
 	'syslogconf' => {
@@ -53,9 +51,7 @@ $common{'RHEL'}{5}{files} = {
 		}
 	}
 };
-$common{'RHEL'}{5}{task}  = {
-		'restart' => [ q{/etc/init.d/syslog restart} ]
-};
+$common{'RHEL'}{5}{task} = { 'restart' => [ q{/etc/init.d/syslog restart} ] };
 
 $common{'SLES'}{files} = {
 	'syslogconf' => {
@@ -73,13 +69,26 @@ log { source\(src\); destination\(logserver\); };
 )
 					}
 				}
-			  }
+			}
 		}
 	}
 };
-$common{'SLES'}{task}  = {
-		'restart' => [ q{service syslog restart} ]
+$common{'SLES'}{task} = { 'restart' => [ q{service syslog restart} ] };
+
+$common{'Ubuntu'}{files} = {
+	'syslogconf' => {
+		path    => '/etc/rsyslog.d/6-sios-server.conf',
+		destroy => 1,
+		chmod   => 644,
+		apply   => {
+			1 => {
+				replace => 1,
+				content => q{local6.*                                                @<SYSLOG_SERVER>}
+			}
+		}
+	}
 };
+$common{'Ubuntu'}{task} = { 'restart' => [ q{/etc/init.d/rsyslog restart} ] };
 
 $syslog{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'}{5};
 $syslog{'RHEL'}{6}{0}{'x86_64'} = $common{'RHEL'};
@@ -101,5 +110,8 @@ $syslog{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $syslog{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $syslog{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $syslog{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$syslog{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
+$syslog{'Ubuntu'}{14}{04}{'x86_64'}  = $common{'Ubuntu'};
 
 1;

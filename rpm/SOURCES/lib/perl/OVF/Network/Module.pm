@@ -53,7 +53,7 @@ sub apply ( \% ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
-	
+
 	if ( OVF::State::ovfIsChanged( 'network.*', %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action ...} );
 		destroy( \%options );
@@ -97,12 +97,12 @@ sub create ( \% ) {
 	my $resolvSearch = $options{ovf}{current}{'network.resolv.search'};
 	my $resolvNames  = $options{ovf}{current}{'network.resolv.nameservers'};
 	my $ipv4Gateway  = $options{ovf}{current}{'network.gateway.ipv4'};
-	
-	my $ipv6Gateway  = '';
+
+	my $ipv6Gateway = '';
 	if ( $options{ovf}{current}{'network.gateway.ipv6'} ) {
 		$ipv6Gateway = $options{ovf}{current}{'network.gateway.ipv6'};
 	}
-	
+
 	my $hostname   = $options{ovf}{current}{'network.hostname'};
 	my $domainName = $options{ovf}{current}{'network.domain'};
 
@@ -154,16 +154,16 @@ sub create ( \% ) {
 
 		my $persistentContentTemplate = $networkVars{files}{persistent}{apply}{1}{content} if ( defined $networkVars{files}{persistent} );
 
-		my $onboot =$networkVars{defaults}{onboot};
+		my $onboot = $networkVars{defaults}{onboot};
 		if ( $netIf{$ifNum}{onboot} ) {
 			$onboot = $netIf{$ifNum}{onboot};
 		}
-		
-		my $bootproto =$networkVars{defaults}{bootproto};
+
+		my $bootproto = $networkVars{defaults}{bootproto};
 		if ( $netIf{$ifNum}{bootproto} ) {
-			$bootproto = $netIf{$ifNum}{bootproto};
+			$bootproto = lc( $netIf{$ifNum}{bootproto} );
 		}
-		
+
 		# 'Native' interfaces
 		if ( !$netIf{$ifNum}{'master-label'} ) {
 
@@ -211,6 +211,32 @@ sub create ( \% ) {
 				$persistentTemplate{apply}{1}{content} .= $persistentContentTemplate . "\n";
 			}
 
+			if ( $distro eq 'Ubuntu' ) {
+				$ifTemplate{path} =~ s/<IF_LABEL>/$label/g;
+
+				# IPv4 config
+				$ifTemplate{apply}{1}{content} .= qq{auto $label\n};
+				$ifTemplate{apply}{1}{content} .= qq{iface $label inet $bootproto\n};
+
+				if ( $bootproto ne 'dhcp' ) {
+					$ifTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
+					$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
+					$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
+				}
+
+				# IPv6 config
+				if ( $ipv6 ne '' and $ipv6Prefix ne '' and $ipv6Gateway ne '' ) {
+					$ifTemplate{apply}{1}{content} .= qq{iface $label inet6 $bootproto\n};
+				}
+
+				if ( $bootproto ne 'dhcp' ) {
+					$ifTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
+					$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
+					$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
+				}
+
+			}
+
 			$generatedFiles{"if-$if"} = \%ifTemplate;
 
 			# Slaves
@@ -231,12 +257,20 @@ sub create ( \% ) {
 
 			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Slave ($ifNum) label doesn't match any declared BOND interfaces} ) and next ) if ( $halt );
 
-			$ifSlaveTemplate{path}              =~ s/<IF_LABEL>/$label/g;
-			$ifSlaveTemplate{path}              =~ s/<IF_MAC>/$mac/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MAC>/$mac/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MASTER_LABEL>/$masterLabel/g;
+			if ( $distro eq 'Ubuntu' ) {
+				$ifSlaveTemplate{path} =~ s/<IF_LABEL>/$label/g;
+				$ifSlaveTemplate{apply}{1}{content} .= qq{auto $label\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{iface $label inet manual\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{\tbond-master $masterLabel\n};
+			} else {
+				$ifSlaveTemplate{path}              =~ s/<IF_LABEL>/$label/g;
+				$ifSlaveTemplate{path}              =~ s/<IF_MAC>/$mac/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MAC>/$mac/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MASTER_LABEL>/$masterLabel/g;
+			}
 
 			if ( $persistentContentTemplate ) {
 
@@ -317,6 +351,20 @@ sub create ( \% ) {
 			# Concat to the 'native' interface the alias was defined
 			$generatedFiles{"if-$ifForAlias"}{apply}{1}{content} .= $slesAliasTemplate{content};
 
+		} elsif ( $distro eq 'Ubuntu' ) {
+
+			$ifAliasTemplate{path} =~ s/<IF_LABEL>/$label/g;
+			$ifAliasTemplate{apply}{1}{content} .= qq{auto $label\n};
+			$ifAliasTemplate{apply}{1}{content} .= qq{iface $label inet static\n};
+			$ifAliasTemplate{apply}{1}{content} .= qq{\address $ipv4/$ipv4Prefix\n};
+
+			if ( $ipv6 ne '' and $ipv6Prefix ne '' ) {
+				$ifAliasTemplate{apply}{1}{content} .= qq{iface $label inet6 static\n};
+				$ifAliasTemplate{apply}{1}{content} .= qq{\address $ipv6/$ipv6Prefix\n};
+			}
+
+			$generatedFiles{"ifAlias-$label"} = \%ifAliasTemplate;
+
 		} else {
 
 			$ifAliasTemplate{path}              =~ s/<IF_LABEL>/$label/g;
@@ -387,19 +435,43 @@ sub create ( \% ) {
 			$ipv6Prefix = $netBond{$ifNum}{'ipv6-prefix'};
 		}
 
-		$ifBondTemplate{path}              =~ s/<IF_LABEL>/$label/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
+		if ( $distro eq 'Ubuntu' ) {
 
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_BOND_OPTIONS>/$bondOptions/g;
+			$ifBondTemplate{path} =~ s/<IF_LABEL>/$label/g;
+			$ifBondTemplate{apply}{1}{content} .= qq{auto $label\n};
+			$ifBondTemplate{apply}{1}{content} .= qq{iface $label inet static\n};
+			$ifBondTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
+			$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
 
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
+			if ( $ipv6 ne '' and $ipv6Prefix ne '' ) {
+				$ifBondTemplate{apply}{1}{content} .= qq{iface $label inet6 static\n};
+				$ifBondTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
+				$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
+			}
 
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
+			if ( $bondOptions ) {
+				my @options = split( /\s/, $bondOptions );
+				foreach my $opt ( @options ) {
+					my ( $key, $value ) = split( /\s*=\*/, $opt );
+					$ifBondTemplate{apply}{1}{content} .= qq{$key $value\n};
+				}
+			}
+
+		} else {
+			$ifBondTemplate{path}              =~ s/<IF_LABEL>/$label/g;
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
+
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_BOND_OPTIONS>/$bondOptions/g;
+
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
+
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
+			$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
+		}
 
 		if ( $distro eq 'SLES' ) {
 

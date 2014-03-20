@@ -386,6 +386,99 @@ default <IF_IPV6_GATEWAY> - -}
 	}
 };
 
+# RHEL / CentOS Networks
+$common{'Ubuntu'} = {
+	'packages-bond' => { [ 'ifenslave' ] },
+	'remove' => {
+		'prefix' => 'ifcfg-',
+		'path'   => '/etc/network/interfaces.d'
+	},
+	'defaults' => {
+		'bond-options' => 'mode=1 miimon=100',
+		'ipv4'         => '',
+		'ipv4-prefix'  => '',
+		'ipv6'         => '',
+		'ipv6-prefix'  => '',
+		'onboot'       => 'yes',
+		'onparent'     => 'yes',
+		'bootproto'    => 'static'
+	},
+	'files' => {
+		'interfaces' => {
+			path  => '/etc/network/interfaces',
+			save  => 1,
+			apply => {
+				1 => {
+					'delete' => {
+						1 => { regex => '^\s*auto\s+eth\d+' },
+						2 => { regex => '^\s*iface\s+eth\d+' }
+					}
+				},
+				2 => {
+					tail    => 1,
+					content => 'source /etc/network/interfaces.d/ifcfg-*'
+				}
+			}
+		},
+		'if' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'ifSlave' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'ifAlias' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'ifBond' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'hostname' => {
+			path  => '/etc/hostname',
+			save  => 1,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{<HOSTNAME>.<DOMAIN>}
+				}
+			}
+		},
+		'resolv' => {
+			path  => '/etc/resolv.conf',
+			save  => 1,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		}
+	}
+};
+
 # SLES 11 is using the newer syntax matching RHEL 6.x but the path is still different
 # Repeat for multiple aliases
 
@@ -415,5 +508,8 @@ $network{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $network{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'}{10};
 $network{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $network{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$network{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
+$network{'Ubuntu'}{14}{04}{'x86_64'} = $common{'Ubuntu'};
 
 1;

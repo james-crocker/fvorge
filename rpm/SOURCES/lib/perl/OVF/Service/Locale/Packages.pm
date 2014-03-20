@@ -30,12 +30,12 @@ sub apply ( \% ) {
 	my ( %options ) = %{ ( shift ) };
 
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
-	my $action  = $thisSubName;
-	my $arch    = $options{ovf}{current}{'host.architecture'};
-	my $distro  = $options{ovf}{current}{'host.distribution'};
-	my $major   = $options{ovf}{current}{'host.major'};
-	my $minor   = $options{ovf}{current}{'host.minor'};
-	my $product = $options{ovf}{current}{'sios.product'};
+	my $action      = $thisSubName;
+	my $arch        = $options{ovf}{current}{'host.architecture'};
+	my $distro      = $options{ovf}{current}{'host.distribution'};
+	my $major       = $options{ovf}{current}{'host.major'};
+	my $minor       = $options{ovf}{current}{'host.minor'};
+	my $product     = $options{ovf}{current}{'sios.product'};
 
 	my $property = 'host.locale.change';
 
@@ -77,13 +77,18 @@ sub install ( \% ) {
 	my %localeVars = %{ $OVF::Service::Locale::Vars::locale{$distro}{$major}{$minor}{$arch} };
 
 	# No need to install the 'default' lang. (Most likely EN)
-	if ( ( $distro eq 'RHEL' or $distro eq 'CentOS' or $distro eq 'ORAL' ) ) {
+	if ( $distro ne 'SLES' ) {
 
 		( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: DEFAULT $lang } ) and return ) if ( $lang eq $localeVars{'default'} );
 
 		Sys::Syslog::syslog( 'info', qq{$action INITIATE ... } );
 
-		OVF::Manage::Packages::groupInstall( %options, @{ $localeVars{packages}{$lang} } );
+		if ( $distro eq 'Ubuntu' ) {
+			OVF::Manage::Packages::install( %options, @{ $localeVars{packages}{$lang} } );
+
+		} else {
+			OVF::Manage::Packages::groupInstall( %options, @{ $localeVars{packages}{$lang} } );
+		}
 
 		Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 	}
@@ -107,13 +112,17 @@ sub remove ( \% ) {
 	my %localeVars = %{ $OVF::Service::Locale::Vars::locale{$distro}{$major}{$minor}{$arch} };
 
 	# Dont' remove the 'default' lang
-	if ( ( $distro eq 'RHEL' or $distro eq 'CentOS' or $distro eq 'ORAL' ) and $previousLang ) {
+	if ( ( $distro ne 'SLES' ) and $previousLang ) {
 
 		( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: DEFAULT $lang } ) and return ) if ( $previousLang ne $localeVars{'default'} );
 
 		Sys::Syslog::syslog( 'info', qq{$action INITIATE ... } );
 
-		OVF::Manage::Packages::groupRemove( %options, @{ $localeVars{packages}{$previousLang} } );
+		if ( $distro eq 'Ubuntu' ) {
+			OVF::Manage::Packages::remove( %options, @{ $localeVars{packages}{$previousLang} } );
+		} else {
+			OVF::Manage::Packages::groupRemove( %options, @{ $localeVars{packages}{$previousLang} } );
+		}
 
 		Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 	}

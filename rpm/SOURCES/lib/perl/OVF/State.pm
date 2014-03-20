@@ -476,6 +476,7 @@ sub propertiesGetCurrent ( \% ) {
 	my $archsRegex        = $OVF::Vars::Common::sysVars{archsRegex};
 	my $rhelVersionsRegex = $OVF::Vars::Common::sysVars{rhelVersionsRegex};
 	my $slesVersionsRegex = $OVF::Vars::Common::sysVars{slesVersionsRegex};
+	my $ubuntuVersionsRegex = $OVF::Vars::Common::sysVars{ubuntuVersionsRegex};
 
 	my $distro   = $options->{ovf}{current}{'host.distribution'};
 	my $arch     = $options->{ovf}{current}{'host.architecture'};
@@ -491,10 +492,12 @@ sub propertiesGetCurrent ( \% ) {
 
 	my $compoundVersion = qq{$major.$minor};
 
-	if ( $distro ne 'SLES' ) {
-		( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $rhelVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($rhelVersionsRegex)$/ );
-	} else {
+    if ( $distro eq 'SLES' ) {
 		( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $slesVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($slesVersionsRegex)$/ );
+	} elsif ( $distro eq 'Ubuntu' ) {
+        ( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $ubuntuVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($ubuntuVersionsRegex)$/ );		
+	} else {
+		( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $rhelVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($rhelVersionsRegex)$/ );
 	}
 
 }

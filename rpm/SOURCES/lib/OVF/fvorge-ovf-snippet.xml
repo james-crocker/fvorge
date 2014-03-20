@@ -120,7 +120,7 @@
     <ProductSection ovf:class="service" ovf:instance="ntp">
       <Info>Information about the installed software</Info>
       <Category>Services::Time</Category>
-      <Property ovf:key="time" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y server=ntp1.sc.sios.com">
+      <Property ovf:key="time" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y servers=ntp1.sc.sios.com">
         <Label>Network Time [NTP]</Label>
       </Property>
     </ProductSection>

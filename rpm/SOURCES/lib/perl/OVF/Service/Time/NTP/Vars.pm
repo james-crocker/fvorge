@@ -43,7 +43,7 @@ restrict -6 default kod nomodify notrap nopeer noquery
 restrict 127.0.0.1            
 restrict -6 ::1            
                  
-server <NTP_SERVER>
+<NTP_SERVER>
 server 0.centos.pool.ntp.org
 server 1.centos.pool.ntp.org
 server 2.centos.pool.ntp.org
@@ -107,7 +107,7 @@ restrict -6 default kod nomodify notrap nopeer noquery
 restrict 127.0.0.1            
 restrict -6 ::1            
                  
-server <NTP_SERVER>
+<NTP_SERVER>
 server 0.centos.pool.ntp.org
 server 1.centos.pool.ntp.org
 server 2.centos.pool.ntp.org
@@ -117,7 +117,7 @@ includefile /etc/ntp/crypto/pw
 #keys /etc/ntp.keys (broken init script)
 }
 				}
-			  }
+			}
 		}
 	},
 	'init' => {
@@ -127,6 +127,37 @@ includefile /etc/ntp/crypto/pw
 			start => '/etc/init.d/ntp start',
 			off   => 'chkconfig ntp off',
 			on    => 'chkconfig ntp on',
+		}
+	}
+};
+
+$common{'Ubuntu'} = {
+	'packages' => [ 'ntp' ],
+	'files'    => {
+		'ntpconf' => {
+			path  => '/etc/ntp.conf',
+			save  => 1,
+			chmod => 644,
+			apply => {
+				1 => {
+					substitute => {
+						1 => {
+							unique  => 1,
+							regex   => q{^server\s},
+							content => q{}
+						},
+					}
+				}
+			}
+		}
+	},
+	'init' => {
+		'ntp' => {
+			path  => '/etc/init.d/ntp',
+			stop  => '/etc/init.d/ntp stop',
+			start => '/etc/init.d/ntp start',
+			off   => 'update-rc.d ntp disable',
+			on    => 'update-rc.d ntp enable',
 		}
 	}
 };
@@ -153,9 +184,11 @@ $ntp{'CentOS'}{6}{4}{'x86_64'} = $common{'RHEL'};
 
 $ntp{'ORAL'}{6}{3}{'x86_64'} = $common{'RHEL'};
 $ntp{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
-
 $ntp{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $ntp{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $ntp{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$ntp{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
+$ntp{'Ubuntu'}{14}{04}{'x86_64'}  = $common{'Ubuntu'};
 
 1;

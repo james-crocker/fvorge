@@ -140,6 +140,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	#OVF::Service::Database::SAPDB::Packages::apply( %options );
 	#OVF::Service::Database::Sybase::Packages::apply( %options );
 	OVF::Service::Graphic::XServer::Packages::apply( %options );
+	OVF::Network::Packages::apply( %options );
 	OVF::Service::Report::SNMP::Packages::apply( %options );
 	OVF::Service::Security::PAM::LDAP::Packages::apply( %options );
 	OVF::Service::Storage::ISCSI::Packages::apply( %options );
@@ -328,6 +329,7 @@ Packages
 	#OVF::Service::Database::SAPDB::Packages::apply
 	#OVF::Service::Database::Sybase::Packages::apply
 	OVF::Service::Graphic::XServer::Packages::apply
+	OVF::Network::Packages::apply
 	OVF::Service::Report::SNMP::Packages::apply
 	OVF::Service::Security::PAM::LDAP::Packages::apply
 	OVF::Service::Storage::ISCSI::Packages::apply
@@ -519,7 +521,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	NTP [service.time.ntp]: (may be empty) OS default is NO Packages, DISABLED
 		packages=y   
 		enabled=y
-		+server=ntp1.sc.steeleye.com
+		+servers=ntp1.sc.steeleye.com
 		
 	PAM-LDAP [service.secuirty.pam.ldap]: (may be empty) OS default is NO Packages, DISABLED
 		packages=y

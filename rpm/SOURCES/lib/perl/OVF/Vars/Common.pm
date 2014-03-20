@@ -37,10 +37,11 @@ our $sysArch    = $SIOS::SysInfo::arch;
 our %sysCmds;
 our %sysVars;
 
-$sysVars{distrosRegex}      = q{RHEL|CentOS|ORAL|SLES};
-$sysVars{archsRegex}        = q{x86_64|i686};
-$sysVars{rhelVersionsRegex} = q{5\.9|6\.0|6\.1|6\.2|6\.3|6\.4};
-$sysVars{slesVersionsRegex} = q{10\.4|11\.1|11\.2};
+$sysVars{distrosRegex}       = q{RHEL|CentOS|ORAL|SLES|Ubuntu};
+$sysVars{archsRegex}         = q{x86_64|i686};
+$sysVars{rhelVersionsRegex}  = q{5\.9|6\.0|6\.1|6\.2|6\.3|6\.4};
+$sysVars{slesVersionsRegex}  = q{10\.4|11\.1|11\.2};
+$sysVars{ubuntuVersionRegex} = q{13\.10|14\.04};
 
 $sysVars{'fvorge'}{home}           = '/opt/fvorge';
 $sysVars{'fvorge'}{bin}            = $sysVars{'fvorge'}{home} . '/bin';
@@ -77,6 +78,7 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{runlevelCmd} = 'runlevel | awk \'{pr
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Network::Module::destroy'}{rmCmd}             = 'rm -f';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Network::Module::restartNetwork'}{restartCmd} = '/etc/init.d/network restart';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Network::Module::restartNetwork'}{restartCmd}   = 'service networking restart';
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Service::Database::Oracle::Module::create'}{sysctlCmd} = 'sysctl -p';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Service::Database::Sybase::Module::create'}{sysctlCmd} = 'sysctl -p';
@@ -144,6 +146,10 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::groupRemove'
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::update'}{pkgUpdateCmd}        = 'yum -y update';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::groupUpdate'}{pkgUpdateCmd}   = 'yum -y groupupdate';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::clean'}{pkgCleanCmd}          = 'yum -y clean all';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::install'}{pkgInstallCmd}        = 'apt-get -y install';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::remove'}{pkgRemoveCmd}          = 'apt-get -y remove';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::update'}{pkgUpdateCmd}          = 'apt-get -y update';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::clean'}{pkgCleanCmd}            = 'apt-get -y clean';
 $sysCmds{'suse'}{'10'}{$sysArch}{'OVF::Manage::Packages::addSuseRepo'}{pkgAddSuseRepoCmd}         = 'zypper sa --t YUM --repo';
 $sysCmds{'suse'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::install'}{pkgInstallCmd}          = 'zypper --non-interactive --no-gpg-checks install';
 $sysCmds{'suse'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::remove'}{pkgRemoveCmd}            = 'zypper --non-interactive --no-gpg-checks remove';

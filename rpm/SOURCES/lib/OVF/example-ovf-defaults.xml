@@ -102,7 +102,7 @@
 
          <Property oe:key="service.storage.multipath" oe:value="packages=y enabled=y"/>
 
-         <Property oe:key="service.time.ntp" oe:value="packages=y enabled=y server=ntp1.sc.steeleye.com"/>
+         <Property oe:key="service.time.ntp" oe:value="packages=y enabled=y servers=ntp1.sc.steeleye.com,ntp.ubuntu.com"/>
 
          <Property oe:key="sios" oe:value="product=sps prerequisites=y packages-32bit=y setup=n"/>
 

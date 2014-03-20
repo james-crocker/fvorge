@@ -37,19 +37,19 @@ sub apply ( \% ) {
 	my $distro = $options{ovf}{current}{'host.distribution'};
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
-	
+
 	my $property = 'service.time.ntp.enabled';
 
 	if ( !defined $OVF::Service::Time::NTP::Vars::ntp{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
-	
+
 	if ( !defined $options{ovf}{current}{$property} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $property undefined} );
 		return;
 	}
-	
+
 	if ( !OVF::State::ovfIsChanged( $property, %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO changes to apply; Current $property same as Previous property} );
 	} else {
@@ -59,7 +59,7 @@ sub apply ( \% ) {
 		} else {
 			disable( \%options );
 		}
-	} 
+	}
 
 }
 
@@ -78,12 +78,19 @@ sub enable ( \% ) {
 	my %ntpVars = %{ $OVF::Service::Time::NTP::Vars::ntp{$distro}{$major}{$minor}{$arch} };
 
 	my $required        = [];
-	my $requiredEnabled = [ 'service.time.ntp.server' ];
+	my $requiredEnabled = [ 'service.time.ntp.servers' ];
 	return if ( OVF::State::checkRequired( $action, $required, 'service.time.ntp.enabled', $requiredEnabled, %options ) );
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
-	$ntpVars{files}{'ntpconf'}{apply}{1}{content} =~ s/<NTP_SERVER>/$options{ovf}{current}{'service.time.ntp.server'}/;
+	my @servers = split( /,/, $options{ovf}{current}{'service.time.ntp.servers'} );
+	foreach my $server ( @servers ) {
+		if ( $distro eq 'Ubuntu' ) {
+			$ntpVars{files}{'ntpconf'}{apply}{1}{substitute}{1}{content} .= qq{server $server\n};
+		} else {
+			$ntpVars{files}{'ntpconf'}{apply}{1}{content} .= qq{server $server\n};
+		}
+	}
 
 	OVF::Manage::Files::create( %options, %{ $ntpVars{files} } );
 	OVF::Manage::Init::enable( %options, %{ $ntpVars{init} } );
