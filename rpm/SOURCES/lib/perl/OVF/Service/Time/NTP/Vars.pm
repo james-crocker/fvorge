@@ -188,7 +188,7 @@ $ntp{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $ntp{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $ntp{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
-$ntp{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
-$ntp{'Ubuntu'}{14}{04}{'x86_64'}  = $common{'Ubuntu'};
+$ntp{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$ntp{'Ubuntu'}{'14'}{'04'}{'x86_64'}  = $common{'Ubuntu'};
 
 1;

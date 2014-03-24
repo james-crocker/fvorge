@@ -95,6 +95,8 @@
          <Property oe:key="service.security.selinux" oe:value="enabled=n"/>
 
          <Property oe:key="service.security.sshd" oe:value="permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y"/>
+         
+         <Property oe:key="service.security.sshd.userconfig" oe:value=""/>
 
          <Property oe:key="service.storage.iscsi" oe:value="packages=y enabled=y portal=iscsi.sc.steeleye.com initiatorname=iqn.2013-01.com.steeleye.qa.init:00-00-00-00-000-01 targetiqn=iqn.2013-01.com.steeleye.qa.target:00-00-00-00-000"/>
 

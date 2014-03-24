@@ -99,7 +99,7 @@ sub remove ( \% ) {
 
     ( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SYSTEM AT INITIAL STATE ...} ) and return ) if ( !exists $options{ovf}{previous} );
 
-    my %xVars = %{ $OVF::Network::Vars::network{$distro}{$major}{$minor}{$arch} };
+    my %networkVars = %{ $OVF::Network::Vars::network{$distro}{$major}{$minor}{$arch} };
 
     Sys::Syslog::syslog( 'info', qq{$action INITIATE ... } );
 

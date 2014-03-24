@@ -50,7 +50,7 @@ $xserver{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $xserver{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $xserver{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
-$xserver{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
-$xserver{'Ubuntu'}{14}{04}{'x86_64'} = $common{'Ubuntu'};
+$xserver{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$xserver{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

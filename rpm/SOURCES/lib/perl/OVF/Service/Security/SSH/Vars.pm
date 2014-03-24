@@ -27,6 +27,8 @@ our %sshd;
 my %common;
 my %commonSshd;
 
+my $sshKeyName = 'id_rsa';
+
 $common{'RHEL'} = {
 	'directories' => {
 		'home' => {
@@ -50,7 +52,7 @@ $common{'RHEL'} = {
 					content => q{Host *
   StrictHostKeyChecking no
   UserKnownHostsFile=/dev/null
-  IdentityFile <SSH_BASE_PATH>/.ssh/cae-qa-anyhost-id_rsa
+  IdentityFile <SSH_PRIVATE_KEY>
   ForwardX11 yes}
 				}
 			}
@@ -77,12 +79,12 @@ $common{'RHEL'} = {
 			apply => {
 				1 => {
 					replace => 1,
-					content => q{#REPLACE WITH YOUR AUTHORIZED KEYS}
+					content => q{}
 				}
 			}
 		},
-		'cae-qa-anyhost-id_rsa.pub' => {
-			path  => 'cae-qa-anyhost-id_rsa.pub',
+		'pubkey' => {
+			path  => qq{<SSH_USER>-$sshKeyName.pub},
 			save  => 0,
 			chmod => 644,
 			chown => 0,
@@ -90,12 +92,12 @@ $common{'RHEL'} = {
 			apply => {
 				1 => {
 					replace => 1,
-					content => q{#ssh-rsa REPLACE WITH YOUR PUBLIC KEY}
+					content => q{}
 				}
 			}
 		},
-		'cae-qa-anyhost-id_rsa' => {
-			path  => 'cae-qa-anyhost-id_rsa',
+		'privkey' => {
+			path  => qq{<SSH_USER>-$sshKeyName},
 			save  => 0,
 			chmod => 600,
 			chown => 0,
@@ -103,13 +105,15 @@ $common{'RHEL'} = {
 			apply => {
 				1 => {
 					replace => 1,
-					content => q{-----BEGIN RSA PRIVATE KEY-----
-REPLACE WITH YOUR PRIVATE KEY
------END RSA PRIVATE KEY-----}
+					content => q{}
 				}
 			}
 		}
 	}
+};
+
+$common{'RHEL'}{task} = {
+    'genkeypair'  => [ qq{ssh-keygen -t rsa -b 2048 -N '' -f <SSH_BASE_PATH>/<SSH_USER>-$sshKeyName} ]
 };
 
 $common{'SLES'} = Storable::dclone( $common{'RHEL'} );
@@ -186,6 +190,9 @@ $ssh{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $ssh{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $ssh{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
+$ssh{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'RHEL'};
+$ssh{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'RHEL'};
+
 $sshd{'RHEL'}{5}{9}{'x86_64'} = $commonSshd{'RHEL'};
 $sshd{'RHEL'}{6}{0}{'x86_64'} = $commonSshd{'RHEL'};
 $sshd{'RHEL'}{6}{1}{'x86_64'} = $commonSshd{'RHEL'};
@@ -206,5 +213,8 @@ $sshd{'ORAL'}{6}{4}{'x86_64'} = $commonSshd{'RHEL'};
 $sshd{'SLES'}{10}{4}{'x86_64'} = $commonSshd{'SLES'};
 $sshd{'SLES'}{11}{1}{'x86_64'} = $commonSshd{'SLES'};
 $sshd{'SLES'}{11}{2}{'x86_64'} = $commonSshd{'SLES'};
+
+$sshd{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $commonSshd{'RHEL'};
+$sshd{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $commonSshd{'RHEL'};
 
 1;

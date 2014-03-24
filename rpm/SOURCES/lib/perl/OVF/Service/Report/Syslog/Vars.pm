@@ -111,7 +111,7 @@ $syslog{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $syslog{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $syslog{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
-$syslog{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
-$syslog{'Ubuntu'}{14}{04}{'x86_64'}  = $common{'Ubuntu'};
+$syslog{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$syslog{'Ubuntu'}{'14'}{'04'}{'x86_64'}  = $common{'Ubuntu'};
 
 1;

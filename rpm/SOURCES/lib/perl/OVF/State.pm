@@ -45,7 +45,7 @@ my @previousOvfProperties;
 
 my $originalsPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{path};
 
-my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|custom\..+)$};
+my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|service.security.sshd.userconfig|custom\..+)$};
 my $yesRegex          = 'y|yes|true|t|1';
 my $noRegex           = 'n|no|false|f|0';
 my $saneKeyRegex      = q{[a-z\-\_\.0-9]+};
@@ -165,7 +165,7 @@ sub normalizeTrueFalse ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|rsa-auth|gssapi-auth|pubkey-auth|permit-root|packages-32bit|add-sshd|syslog-emerg|onboot)$';
+	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|rsa-auth|gssapi-auth|pubkey-auth|permit-root|packages-32bit|add-sshd|syslog-emerg|onboot|genkeypair)$';
 	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
 
 	if ( $item !~ /,/ ) {

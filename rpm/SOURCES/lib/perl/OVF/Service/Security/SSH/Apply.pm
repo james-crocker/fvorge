@@ -36,53 +36,86 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 # For surpressing stdout, stderr.
 my $quietCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd};
 
-sub createUserConfig ( \%$$$ ) {
+sub createUserConfig ( \% ) {
 
 	my %options = %{ ( shift ) };
 
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
 
-	my $sshBasePath = shift;
-	my $uid         = shift;
-	my $gid         = shift;
-	my $action      = $thisSubName;
-	my $arch        = $options{ovf}{current}{'host.architecture'};
-	my $distro      = $options{ovf}{current}{'host.distribution'};
-	my $major       = $options{ovf}{current}{'host.major'};
-	my $minor       = $options{ovf}{current}{'host.minor'};
+	my $action = $thisSubName;
+	my $arch   = $options{ovf}{current}{'host.architecture'};
+	my $distro = $options{ovf}{current}{'host.distribution'};
+	my $major  = $options{ovf}{current}{'host.major'};
+	my $minor  = $options{ovf}{current}{'host.minor'};
 
-	my $selinuxRestoreCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'selinuxRestoreCmd'};
+	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSH Vars not available } ) and return ) if ( !defined $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} );
 
-	my %sshVars = %{ Storable::dclone( $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} ) };
+	my %sshUserConfig = %{ $options{ovf}{current}{'service.security.sshd.userconfig'} };
+	foreach my $num ( sort keys %sshUserConfig ) {
 
-	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: (User: $uid) SSH Vars not available } ) and return ) if ( !%sshVars );
+		# Get a fresh set
+		my %sshVars = %{ Storable::dclone( $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} ) };
 
-	Sys::Syslog::syslog( 'info', qq{$action INITIATE (User: $uid) ... } );
+		my $uid = $sshUserConfig{$num}{uid};
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'uid' not defined } ) and next ) if ( !$uid );
 
-	my $sshPath = qq{$sshBasePath/} . $sshVars{directories}{home}{path};
+		my $gid = $sshUserConfig{$num}{gid};
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'gid' not defined } ) and next ) if ( !$gid );
 
-	$sshVars{directories}{home}{chown} = $uid;
-	$sshVars{directories}{home}{chgrp} = $gid;
-	$sshVars{directories}{home}{path}  = $sshPath;
+		my $home = $sshUserConfig{$num}{home};
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'home' not defined } ) and next ) if ( !$home );
 
-	$sshVars{files}{config}{apply}{1}{content} =~ s/<SSH_BASE_PATH>/$sshBasePath/;
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'genkeypair' not defined } ) and next ) if ( !defined $sshUserConfig{$num}{genkeypair} );
+		my $genKeyPair = $sshUserConfig{$num}{genkeypair};
 
-	foreach my $key ( keys %{ $sshVars{files} } ) {
-		$sshVars{files}{$key}{chown} = $uid;
-		$sshVars{files}{$key}{chgrp} = $gid;
-		$sshVars{files}{$key}{path}  = $sshPath . '/' . $sshVars{files}{$key}{path};
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) genkeypair=n; 'pubkey' and/or 'privkey' not defined } ) and next ) if ( !$genKeyPair and ( !defined $sshUserConfig{$num}{pubkey} or !defined $sshUserConfig{$num}{privkey} ) );
+
+		Sys::Syslog::syslog( 'info', qq{$action INITIATE (User: $uid) ... } );
+
+		my $sshPath = qq{$home/} . $sshVars{directories}{home}{path};
+		$sshVars{directories}{home}{chown} = $uid;
+		$sshVars{directories}{home}{chgrp} = $gid;
+		$sshVars{directories}{home}{path}  = $sshPath;
+		
+		foreach my $key ( keys %{ $sshVars{files} } ) {
+			$sshVars{files}{$key}{chown} = $uid;
+			$sshVars{files}{$key}{chgrp} = $gid;
+			$sshVars{files}{$key}{path} =~ s/<SSH_USER>/$uid/;
+			$sshVars{files}{$key}{path} = $sshPath . '/' . $sshVars{files}{$key}{path};
+		}
+
+		$sshVars{files}{config}{apply}{1}{content} =~ s/<SSH_PRIVATE_KEY>/$sshVars{files}{privkey}{path}/;
+
+		if ( $sshUserConfig{$num}{authorizedkeys} ) {
+			my @authKeys = split( /\s*,\s*/, $sshUserConfig{$num}{authorizedkeys} );
+			$sshVars{files}{'authorized_keys'}{apply}{1}{content} = join( qq{\n}, @authKeys );
+		}
+
+		if ( $genKeyPair ) {
+			# Remove pub/priv key files from the later create since asked to generate the keypair
+			delete $sshVars{files}{pubkey};
+			delete $sshVars{files}{privkey};
+			$sshVars{task}{genkeypair}[ 0 ] =~ s/<SSH_BASE_PATH>/$sshPath/;
+            $sshVars{task}{genkeypair}[ 0 ] =~ s/<SSH_USER>/$uid/;
+		} else {
+			$sshVars{files}{pubkey}{apply}{1}{content}  = $sshUserConfig{$num}{pubkey};
+			$sshVars{files}{privkey}{apply}{1}{content} = $sshUserConfig{$num}{privkey};
+			$sshVars{task}{genkeypair} = [];
+		}
+
+		OVF::Manage::Directories::create( %options, %{ $sshVars{directories} } );
+		OVF::Manage::Tasks::run( %options, @{ $sshVars{task}{genkeypair} } );
+		OVF::Manage::Files::create( %options, %{ $sshVars{files} } );
+
+		# Re-apply SELINUX settings after all the dir/files layed down
+		if ( $distro eq 'SLES' ) {
+			my $selinuxRestoreCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'selinuxRestoreCmd'};
+			Sys::Syslog::syslog( 'info', qq{$action RUNNING: $selinuxRestoreCmd $sshPath ... } );
+			system( qq{$selinuxRestoreCmd $sshPath $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't $selinuxRestoreCmd ($sshPath) ($?:$!)} );
+		}
+
+		Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 	}
-
-	OVF::Manage::Directories::create( %options, %{ $sshVars{directories} } );
-	OVF::Manage::Files::create( %options, %{ $sshVars{files} } );
-
-	# Re-apply SELINUX settings after all the dir/files layed down
-	if ( $distro ne 'SLES' ) {
-		Sys::Syslog::syslog( 'info', qq{$action RUNNING: $selinuxRestoreCmd $sshPath ... } );
-		system( qq{$selinuxRestoreCmd $sshPath $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't $selinuxRestoreCmd ($sshPath) ($?:$!)} );
-	}
-
-	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 
 }
 
@@ -103,9 +136,9 @@ sub sshdConfig ( \% ) {
 	my $gssapi = $options{ovf}{current}{'service.security.sshd.gssapi-auth'};
 	my $rsa    = $options{ovf}{current}{'service.security.sshd.rsa-auth'};
 
-	my %sshdVars = %{ $OVF::Service::Security::SSH::Vars::sshd{$distro}{$major}{$minor}{$arch} };
+	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSHD Vars not available } ) and return ) if ( !defined $OVF::Service::Security::SSH::Vars::sshd{$distro}{$major}{$minor}{$arch} );
 
-	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSHD Vars not available } ) and return ) if ( !%sshdVars );
+	my %sshdVars = %{ $OVF::Service::Security::SSH::Vars::sshd{$distro}{$major}{$minor}{$arch} };
 
 	# Remove settings if not requested
 	if ( !defined $root ) {

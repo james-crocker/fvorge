@@ -387,8 +387,8 @@ default <IF_IPV6_GATEWAY> - -}
 };
 
 # RHEL / CentOS Networks
+$common{'Ubuntu'}{'packages-bond'} = [ 'ifenslave' ];
 $common{'Ubuntu'} = {
-	'packages-bond' => { [ 'ifenslave' ] },
 	'remove' => {
 		'prefix' => 'ifcfg-',
 		'path'   => '/etc/network/interfaces.d'
@@ -466,16 +466,15 @@ $common{'Ubuntu'} = {
 				}
 			}
 		},
-		'resolv' => {
-			path  => '/etc/resolv.conf',
-			save  => 1,
+		'persistent' => {
+			path  => '/etc/udev/rules.d/70-persistent-net.rules',
 			apply => {
 				1 => {
 					replace => 1,
-					content => q{}
+					content => q{SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="<IF_MAC>", ATTR{type}=="1", KERNEL=="eth*", NAME="<IF_LABEL>"}
 				}
 			}
-		}
+		  }
 	}
 };
 
@@ -509,7 +508,7 @@ $network{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'}{10};
 $network{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $network{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
-$network{'Ubuntu'}{13}{10}{'x86_64'} = $common{'Ubuntu'};
-$network{'Ubuntu'}{14}{04}{'x86_64'} = $common{'Ubuntu'};
+$network{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$network{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

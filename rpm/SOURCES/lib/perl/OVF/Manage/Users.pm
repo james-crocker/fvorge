@@ -66,7 +66,8 @@ sub create ( \%\% ) {
 		my $retVal = system( qq{$myAddCmd $user $quietCmd} );
 		if ( $retVal == 0 ) {
 			# Create SSH user config
-			OVF::Service::Security::SSH::Apply::createUserConfig( \%options, $ovfObject{$user}{homeDir}, $ovfObject{$user}{uid}, $ovfObject{$user}{gid} );	
+			# DISABLED 20140324 - TODO refactor for changes in createUserConfig routine
+			#OVF::Service::Security::SSH::Apply::createUserConfig( \%options, $ovfObject{$user}{homeDir}, $ovfObject{$user}{uid}, $ovfObject{$user}{gid} );	
 		} else {
 			Sys::Syslog::syslog( 'warning', qq{$action Couldn't ($myAddCmd $user) ($?:$!)} );	
 		}

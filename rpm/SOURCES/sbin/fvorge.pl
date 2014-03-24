@@ -30,6 +30,7 @@ use Sys::Syslog;
 use OVF::State;
 use OVF::Custom::Module;
 use OVF::Network::Module;
+use OVF::Network::Packages;
 use OVF::Service::App::NFS::Module;
 use OVF::Service::App::NFS::Packages;
 use OVF::Service::App::Samba::Module;
@@ -105,7 +106,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	OVF::Custom::Module::apply( $customGroup, 'before', %options );
 	OVF::Network::Module::apply( %options );
 	OVF::Service::Security::SSH::Apply::sshdConfig( %options );
-	OVF::Service::Security::SSH::Apply::createUserConfig( %options, '/root', 'root', 'root' );
+	OVF::Service::Security::SSH::Apply::createUserConfig( %options );
 	OVF::Custom::Module::apply( $customGroup, 'after', %options );
 
 	OVF::State::propertiesSave( $group, %options );
@@ -312,8 +313,7 @@ Network
 	OVF::Custom::Module::apply( 'custom.network', 'before' )
 	OVF::Network::Module::apply
 	OVF::Service::Security::SSH::Apply::sshdConfig
-	OVF::Service::Security::SSH::Apply::createUserConfig( %options, '/root', 'root', 'root' );
-	OVF::Custom::Module::apply( 'custom.network', 'after' )
+	OVF::Service::Security::SSH::Apply::createUserConfig
 	--reboot--
 Packages
 	OVF::Custom::Module::apply( 'custom.packages', 'before' )
@@ -446,7 +446,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		*search=sc.steeleye.com,sc6.steeleye.com,steeleye.com
 		*nameservers=172.17.4.1,172.17.4.60
 
-	'REAL' interfaces [network.if]: (may be empty, but not very usefull)
+	'REAL' interfaces [network.if]: (required)
 		IPv4 only, IPv6 only or BOTH 		
 		*if=1 (the order of 'physical' network interface adapters, generally 'top-down' in the VM guest host hardware properties)
 		*label=eth0 (arbitrary)
@@ -540,6 +540,17 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		rsa-auth=y
 		gssapi-auth=n
 		pubkey-auth=y
+		
+	SSHD [service.security.sshd.userconfig]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
+	    *uid=username
+	    *gid=groupname
+	    *home=user home path
+	    *genkeypair=y (if no; privkey and pubkey must be defined)
+	    privkey=... (ignored if genkeypair=n)
+	    pubkey=... (ignored if genkeypair=n)
+        authorizedkeys=authorized_key format seperate multiple with ',' (make sure to use %3D for = and %20 for spaces if either occur in your keys)
+        
+        EXAMPLE: uid=root gid=root home=/root genkeypair=y authorizedkeys=ssh-rsa%20 A...%3D%20usera@hosta,ssh-rsa%20A...H%20userb@hostb ;; uid=sios gid=sios home=/home/sios genkeypair=y
 
 	SYSLOG [service.report.syslog]: (syslog, rsyslog, syslog-ng) (may be empty) OS default is NO central syslog messaging
 		enabled=y
