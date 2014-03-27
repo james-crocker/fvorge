@@ -71,7 +71,7 @@ baseurl=file:///media/<LC_DISTRO>/
 enabled=1
 gpgcheck=0}
 			}
-		  }
+		}
 	},
 	'CentOS-Base.repo' => {
 		path  => '/etc/yum.repos.d/CentOS-Base.repo',
@@ -86,6 +86,46 @@ gpgcheck=0}
 					}
 				}
 			}
+		}
+	}
+};
+
+$common{'Ubuntu'} = {
+
+	# Ubuntu 14.04 Server has unattended-upgrades already installed
+	#'packages' => [ 'unattended-upgrades']
+	'files' => {
+		'10periodic' => {
+			path  => '/etc/apt/apt.conf.d/10periodic',
+			save  => 0,
+			chmod => 644,
+			apply => {
+				1 => {
+					substitute => {
+						1 => {
+							regex   => '^\s*APT::Periodic::Download-Upgradeable-Packages\s+"0";',
+							content => q{APT::Periodic::Download-Upgradeable-Packages "1";}
+						},
+						2 => {
+                            regex   => '^\s*APT::Periodic::AutocleanInterval\s+"0";',
+                            content => q{APT::Periodic::AutocleanInterval "7";}
+                        }
+					}
+				},
+				2 => {
+					tail    => 1,
+					content => q{APT::Periodic::Unattended-Upgrade "1";}
+				}
+			}
+		}
+	},
+	'init' => {
+		'unattended-upgrades' => {
+			path  => '/etc/init.d/unattended-upgrades',
+			stop  => '/etc/init.d/unattended-upgrades stop',
+			start => '/etc/init.d/unattended-upgrades start',
+			off   => 'update-rc.d unattended-upgrades disable',
+			on    => 'update-rc.d unattended-upgrades enable',
 		}
 	}
 };
@@ -110,5 +150,8 @@ $packages{'CentOS'}{6}{4}{'x86_64'} = $common{'CentOS'};
 
 $packages{'ORAL'}{6}{3}{'x86_64'} = $common{'RHEL'};
 $packages{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
+
+$packages{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$packages{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

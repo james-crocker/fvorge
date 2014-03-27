@@ -386,9 +386,9 @@ default <IF_IPV6_GATEWAY> - -}
 	}
 };
 
-# RHEL / CentOS Networks
-$common{'Ubuntu'}{'packages-bond'} = [ 'ifenslave' ];
+# Ubuntu Networks
 $common{'Ubuntu'} = {
+	'packages-bond' => [ 'ifenslave' ],
 	'remove' => {
 		'prefix' => 'ifcfg-',
 		'path'   => '/etc/network/interfaces.d'
@@ -474,7 +474,7 @@ $common{'Ubuntu'} = {
 					content => q{SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="<IF_MAC>", ATTR{type}=="1", KERNEL=="eth*", NAME="<IF_LABEL>"}
 				}
 			}
-		  }
+		}
 	}
 };
 

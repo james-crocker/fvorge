@@ -112,12 +112,9 @@ $common{'RHEL'} = {
 	}
 };
 
-$common{'RHEL'}{task} = {
-    'genkeypair'  => [ qq{ssh-keygen -t rsa -b 2048 -N '' -f <SSH_BASE_PATH>/<SSH_USER>-$sshKeyName} ]
-};
+$common{'RHEL'}{task} = { 'genkeypair' => [ qq{ssh-keygen -t rsa -b 2048 -N '' -f <SSH_BASE_PATH>/<SSH_USER>-$sshKeyName} ] };
 
-$common{'SLES'} = Storable::dclone( $common{'RHEL'} );
-
+# SSHD config settings
 $commonSshd{'RHEL'} = {
 	'files' => {
 		'sshd_config' => {
@@ -127,48 +124,102 @@ $commonSshd{'RHEL'} = {
 				1 => {
 					substitute => {
 						1 => {
+							nomatch => 'tail',
 							unique  => 1,
-							regex   => q{^\#*PermitRootLogin},
-							content => q{PermitRootLogin yes}
-						},
-						2 => {
-							unique  => 1,
-							regex   => q{^\#*GSSAPIAuthentication},
-							content => q{GSSAPIAuthentication no}
-						},
-						3 => {
-							unique  => 1,
-							regex   => q{^\#*RSAAuthentication},
-							content => q{RSAAuthentication yes}
-						},
-						4 => {
-							unique  => 1,
-							regex   => q{^\#*PubkeyAuthentication},
-							content => q{PubkeyAuthentication yes}
-						},
-						5 => {
-							unique  => 0,
-							regex   => q{^\#*X11Forwarding},
-							content => q{#X11Forwarding}
-						  }
+							regex   => q{^\s*\#*\s*PermitRootLogin},
+							content => q{PermitRootLogin <SSHD_YORN>}
+						}
 					}
 				},
 				2 => {
-					tail => 1,
-					content => q{X11Forwarding yes}
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*GSSAPIAuthentication},
+							content => q{GSSAPIAuthentication <SSHD_YORN>}
+						}
+					}
+				},
+				3 => {
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*RSAAuthentication},
+							content => q{RSAAuthentication <SSHD_YORN>}
+						}
+					}
+				},
+				4 => {
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*PubkeyAuthentication},
+							content => q{PubkeyAuthentication <SSHD_YORN>}
+						}
+					}
+				},
+				5 => {
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*X11Forwarding},
+							content => q{X11Forwarding <SSHD_YORN>}
+						}
+					}
+				},
+				6 => {
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*AllowTcpForwarding},
+							content => q{AllowTcpForwarding <SSHD_YORN>}
+						}
+					}
+				},
+				7 => {
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*PasswordAuthentication},
+							content => q{PasswordAuthentication <SSHD_YORN>}
+						}
+					}
+				},
+				8 => {
+					substitute => {
+						1 => {
+							nomatch => 'tail',
+							unique  => 1,
+							regex   => q{^\s*\#*\s*UsePAM},
+							content => q{UsePAM <SSHD_YORN>}
+						}
+					}
 				}
 			}
 		}
 	}
 };
 
-$commonSshd{'SLES'} = Storable::dclone( $commonSshd{'RHEL'} );
+$commonSshd{'SLES'}   = Storable::dclone( $commonSshd{'RHEL'} );
+$commonSshd{'Ubuntu'} = Storable::dclone( $commonSshd{'RHEL'} );
 
 $commonSshd{'SLES'}{task} = {
 	'open-firewall'  => [ 'yast2 --ncurses firewall services add service=service:sshd zone=EXT' ],
 	'close-firewall' => [ 'yast2 --ncurses firewall services remove service=service:sshd zone=EXT' ]
 };
 
+$commonSshd{'Ubuntu'}{task} = {
+	'open-firewall'  => [ '/usr/sbin/ufw allow OpenSSH' ],
+	'close-firewall' => [ '/usr/sbin/ufw deny OpenSSH' ]
+};
+
+# SSH
 $ssh{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'};
 $ssh{'RHEL'}{6}{0}{'x86_64'} = $common{'RHEL'};
 $ssh{'RHEL'}{6}{1}{'x86_64'} = $common{'RHEL'};
@@ -186,13 +237,14 @@ $ssh{'CentOS'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $ssh{'ORAL'}{6}{3}{'x86_64'} = $common{'RHEL'};
 $ssh{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 
-$ssh{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
-$ssh{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
-$ssh{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+$ssh{'SLES'}{10}{4}{'x86_64'} = $common{'RHEL'};
+$ssh{'SLES'}{11}{1}{'x86_64'} = $common{'RHEL'};
+$ssh{'SLES'}{11}{2}{'x86_64'} = $common{'RHEL'};
 
 $ssh{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'RHEL'};
 $ssh{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'RHEL'};
 
+# SSHD
 $sshd{'RHEL'}{5}{9}{'x86_64'} = $commonSshd{'RHEL'};
 $sshd{'RHEL'}{6}{0}{'x86_64'} = $commonSshd{'RHEL'};
 $sshd{'RHEL'}{6}{1}{'x86_64'} = $commonSshd{'RHEL'};
@@ -214,7 +266,7 @@ $sshd{'SLES'}{10}{4}{'x86_64'} = $commonSshd{'SLES'};
 $sshd{'SLES'}{11}{1}{'x86_64'} = $commonSshd{'SLES'};
 $sshd{'SLES'}{11}{2}{'x86_64'} = $commonSshd{'SLES'};
 
-$sshd{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $commonSshd{'RHEL'};
-$sshd{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $commonSshd{'RHEL'};
+$sshd{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $commonSshd{'Ubuntu'};
+$sshd{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $commonSshd{'Ubuntu'};
 
 1;

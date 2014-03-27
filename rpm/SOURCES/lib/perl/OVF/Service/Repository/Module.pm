@@ -21,9 +21,9 @@ use strict;
 use warnings;
 
 use lib '../../../../perl';
-use	OVF::Manage::Directories;
-use	OVF::Manage::Files;
-use	OVF::Manage::Packages;
+use OVF::Manage::Directories;
+use OVF::Manage::Files;
+use OVF::Manage::Packages;
 use OVF::Manage::Storage;
 use OVF::Manage::Tasks;
 use OVF::Service::Repository::Vars;
@@ -36,61 +36,68 @@ sub setup ( \% ) {
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
 
 	my $action = $thisSubName;
-	my $arch      = $options{ovf}{current}{'host.architecture'};
-	my $distro    = $options{ovf}{current}{'host.distribution'};
-	my $major     = $options{ovf}{current}{'host.major'};
-	my $minor     = $options{ovf}{current}{'host.minor'};
-	
+	my $arch   = $options{ovf}{current}{'host.architecture'};
+	my $distro = $options{ovf}{current}{'host.distribution'};
+	my $major  = $options{ovf}{current}{'host.major'};
+	my $minor  = $options{ovf}{current}{'host.minor'};
+
 	my $updatesProperty = 'host.updates.enabled';
-	my $updates   = $options{ovf}{current}{$updatesProperty};
-	
+	my $updates         = $options{ovf}{current}{$updatesProperty};
+
 	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SLES setup not necessary} ) and return ) if ( $distro eq 'SLES' );
+	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $updatesProperty not defined} ) and return ) if ( !defined $updates );
 
 	my %packageVars = %{ $OVF::Service::Repository::Vars::packages{$distro}{$major}{$minor}{$arch} };
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
-	my $lcDistro = lc( $distro );
-	$packageVars{mount}{target}              =~ s/<LC_DISTRO>/$lcDistro/;
-	$packageVars{files}{'dvd-repo'}{path}    =~ s/<LC_DISTRO>/$lcDistro/g;
-	$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<LC_DISTRO>/$lcDistro/g;
-	$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<DISTRO>/$distro/g;
-	$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<MAJOR>/$major/g;
-	$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<MINOR>/$minor/g;
-	$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<ARCH>/$arch/g;
-	
+	if ( $distro eq 'CentOS' or $distro eq 'RHEL' ) {
+		my $lcDistro = lc( $distro );
+		$packageVars{mount}{target}                        =~ s/<LC_DISTRO>/$lcDistro/;
+		$packageVars{files}{'dvd-repo'}{path}              =~ s/<LC_DISTRO>/$lcDistro/g;
+		$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<LC_DISTRO>/$lcDistro/g;
+		$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<DISTRO>/$distro/g;
+		$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<MAJOR>/$major/g;
+		$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<MINOR>/$minor/g;
+		$packageVars{files}{'dvd-repo'}{apply}{1}{content} =~ s/<ARCH>/$arch/g;
+	}
+
 	if ( $distro eq 'CentOS' ) {
-		
-		( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $updatesProperty not defined} ) and return ) if ( !defined $updates );
-		
+
 		$packageVars{files}{'CentOS-Base.repo'}{apply}{1}{after}{1}{content} =~ s/<ENABLED>/$updates/g;
-		
+
 		# Change the after to substitute since if changed and already applied
 		if ( exists $options{ovf}{previous} and OVF::State::ovfIsChanged( 'host.updates.enabled', %options ) ) {
 			$packageVars{files}{'CentOS-Base.repo'}{apply}{1}{substitute} = Storable::dclone( $packageVars{files}{'CentOS-Base.repo'}{apply}{1}{after} );
 			delete $packageVars{files}{'CentOS-Base.repo'}{apply}{1}{after};
 		}
-		
+
 	}
 
-	if ( %packageVars ) {
-
-		# Create repo directories
-		if ( $packageVars{directories} ) {
-			OVF::Manage::Directories::create( %options, %{ $packageVars{directories} } );
-		}
-
-		# Create repo files and mount the iso
-		if ( $packageVars{files} ) {
-			OVF::Manage::Files::create( %options, %{ $packageVars{files} } );
-		}
-		if ( $packageVars{mount} ) {
-			OVF::Manage::Storage::umount( %options, %{ $packageVars{mount} } );
-			OVF::Manage::Storage::mount( %options, %{ $packageVars{mount} } );
-		}
+	# Create repo directories
+	if ( $packageVars{directories} ) {
+		OVF::Manage::Directories::create( %options, %{ $packageVars{directories} } );
 	}
 
-	if ( $distro eq 'SLES' and $major == 10 ) {
+	# Create repo files and mount the iso
+	if ( $packageVars{files} ) {
+		OVF::Manage::Files::create( %options, %{ $packageVars{files} } );
+	}
+
+	if ( $packageVars{mount} ) {
+		OVF::Manage::Storage::umount( %options, %{ $packageVars{mount} } );
+		OVF::Manage::Storage::mount( %options, %{ $packageVars{mount} } );
+	}
+
+	if ( $distro eq 'Ubuntu' ) {
+		if ( $packageVars{init} ) {
+			if ( $updates ) {
+				OVF::Manage::Init::enable( %options, %{ $packageVars{init} } );
+			} else {
+				OVF::Manage::Init::disable( %options, %{ $packageVars{init} } );
+			}
+		}
+	} elsif ( $distro eq 'SLES' and $major == 10 ) {
 		OVF::Manage::Packages::addSuseRepo( %options, %{ $packageVars{files} } );
 	}
 

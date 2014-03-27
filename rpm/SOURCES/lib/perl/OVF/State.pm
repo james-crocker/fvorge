@@ -165,7 +165,7 @@ sub normalizeTrueFalse ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|rsa-auth|gssapi-auth|pubkey-auth|permit-root|packages-32bit|add-sshd|syslog-emerg|onboot|genkeypair)$';
+	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|packages-32bit|add-sshd|syslog-emerg|booton|genkeypair)$';
 	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
 
 	if ( $item !~ /,/ ) {
@@ -199,8 +199,8 @@ sub normalizeYesNo ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '\.(onboot|onparent)$';
-	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
+	my $requiredYesNo = '^(onboot|onparent|permit-root|pubkey-auth|gssapi-auth|rsa-auth|x11forwarding|tcpforwarding|password-auth|usepam)$';
+	return $item if ( $key ne '' and $key !~ /$requiredYesNo/ );
 
 	if ( $item =~ /^($yesRegex)$/i ) {
 		return 'yes';

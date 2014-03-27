@@ -23,6 +23,7 @@ use warnings;
 our %syslog;
 my %common;
 
+$common{'RHEL'}{defaults} = { 'port' => 514, 'protocol' => 'tcp', 'facility' => '*.*'};
 $common{'RHEL'}{files} = {
 	'syslogconf' => {
 		path  => '/etc/rsyslog.conf',
@@ -31,7 +32,7 @@ $common{'RHEL'}{files} = {
 		apply => {
 			1 => {
 				'tail'  => 1,
-				content => q{local6.*                                                @<SYSLOG_SERVER>}
+				content => qq{<SYSLOG_FACILITY>\t\t\t<SYSLOG_PROTOCOL><SYSLOG_SERVER><SYSLOG_PORT>}
 			}
 		}
 	}
@@ -53,6 +54,7 @@ $common{'RHEL'}{5}{files} = {
 };
 $common{'RHEL'}{5}{task} = { 'restart' => [ q{/etc/init.d/syslog restart} ] };
 
+$common{'SLES'}{defaults} = { 'port' => 514, 'protocol' => 'tcp', 'facility' => '*.*'};
 $common{'SLES'}{files} = {
 	'syslogconf' => {
 		path  => '/etc/syslog-ng/syslog-ng.conf',
@@ -64,7 +66,7 @@ $common{'SLES'}{files} = {
 					1 => {
 						regex   => '^\s*filter\s+f_alert\s+\{\s*level\s*\(\s*alert\s*\)\s*;\s*\}\s*;\s*$',
 						content => q(
-destination logserver { udp\("<SYSLOG_SERVER>" port\(514\)\); };
+destination logserver { <SYSLOG_PROTOCOL>\("<SYSLOG_SERVER>" port\(<SYSLOG_PORT>\)\); };
 log { source\(src\); destination\(logserver\); };
 )
 					}
@@ -75,20 +77,21 @@ log { source\(src\); destination\(logserver\); };
 };
 $common{'SLES'}{task} = { 'restart' => [ q{service syslog restart} ] };
 
+$common{'Ubuntu'}{defaults} = { 'port' => 514, 'protocol' => 'tcp', 'facility' => '*.*'};
 $common{'Ubuntu'}{files} = {
 	'syslogconf' => {
-		path    => '/etc/rsyslog.d/6-sios-server.conf',
+		path    => '/etc/rsyslog.d/60-central-server.conf',
 		destroy => 1,
 		chmod   => 644,
 		apply   => {
 			1 => {
 				replace => 1,
-				content => q{local6.*                                                @<SYSLOG_SERVER>}
+				content => qq{<SYSLOG_FACILITY>\t\t\t<SYSLOG_PROTOCOL><SYSLOG_SERVER><SYSLOG_PORT>}
 			}
 		}
 	}
 };
-$common{'Ubuntu'}{task} = { 'restart' => [ q{/etc/init.d/rsyslog restart} ] };
+$common{'Ubuntu'}{task} = { 'restart' => [ q{service rsyslog restart} ] };
 
 $syslog{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'}{5};
 $syslog{'RHEL'}{6}{0}{'x86_64'} = $common{'RHEL'};

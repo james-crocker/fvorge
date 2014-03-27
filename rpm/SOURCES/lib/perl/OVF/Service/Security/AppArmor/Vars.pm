@@ -53,9 +53,24 @@ $common{'SLES'} = {
 	'task' => { 'reparse' => [ 'apparmor_parser -r /etc/apparmor.d/sbin.syslog-ng' ] }
 };
 
+$common{'Ubuntu'} = {
+    'init' => {
+        'apparmor' => {
+            path  => '/etc/init.d/apparmor',
+            stop  => '/etc/init.d/apparmor stop',
+            start => '/etc/init.d/apparmor start',
+            off   => 'update-rc.d -f apparmor remove',
+            on    => 'ln -s /etc/init.d/apparmor /etc/rcS.d/S37apparmor'
+        }
+    },
+};
+
 $apparmor{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $apparmor{'SLES'}{11}{0}{'x86_64'} = $common{'SLES'};
 $apparmor{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $apparmor{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$apparmor{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$apparmor{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

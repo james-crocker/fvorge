@@ -146,10 +146,10 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::groupRemove'
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::update'}{pkgUpdateCmd}        = 'yum -y update';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::groupUpdate'}{pkgUpdateCmd}   = 'yum -y groupupdate';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::clean'}{pkgCleanCmd}          = 'yum -y clean all';
-$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::install'}{pkgInstallCmd}        = 'apt-get -y install';
-$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::remove'}{pkgRemoveCmd}          = 'apt-get -y remove';
-$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::update'}{pkgUpdateCmd}          = 'apt-get -y update';
-$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::clean'}{pkgCleanCmd}            = 'apt-get -y clean';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::install'}{pkgInstallCmd}        = 'DEBIAN_FRONTEND="noninteractive" apt-get -y install';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::remove'}{pkgRemoveCmd}          = 'DEBIAN_FRONTEND="noninteractive" apt-get -y remove';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::update'}{pkgUpdateCmd}          = 'DEBIAN_FRONTEND="noninteractive" apt-get -y update';
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::clean'}{pkgCleanCmd}            = 'DEBIAN_FRONTEND="noninteractive" apt-get -y clean';
 $sysCmds{'suse'}{'10'}{$sysArch}{'OVF::Manage::Packages::addSuseRepo'}{pkgAddSuseRepoCmd}         = 'zypper sa --t YUM --repo';
 $sysCmds{'suse'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::install'}{pkgInstallCmd}          = 'zypper --non-interactive --no-gpg-checks install';
 $sysCmds{'suse'}{$sysVersion}{$sysArch}{'OVF::Manage::Packages::remove'}{pkgRemoveCmd}            = 'zypper --non-interactive --no-gpg-checks remove';

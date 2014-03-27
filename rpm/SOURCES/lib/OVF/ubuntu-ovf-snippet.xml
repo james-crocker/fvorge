@@ -1,0 +1,224 @@
+    <ProductSection>
+      <Info>Information about the installed software</Info>
+      <Product>Everest</Product>
+      <Vendor>SIOS Technology Inc.</Vendor>
+      <Version>1.0</Version>
+      <ProductUrl>http://fvorge.us.sios.com/~fvorge/latest</ProductUrl>
+      <VendorUrl>http://us.sios.com</VendorUrl>
+      <Category>Host</Category>
+      <Property ovf:key="host" ovf:type="string" ovf:userConfigurable="true" ovf:value="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=000 instance=1">
+        <Label>Platform</Label>
+      </Property>
+      <Category>Networking</Category>
+      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true" ovf:value="hostname=cae-qa-base domain=sc.steeleye.com">
+        <Label>Host</Label>
+      </Property>      
+    </ProductSection>
+    <ProductSection ovf:class="network">
+      <Info>Information about the installed software</Info>
+      <Category>Networking</Category>
+      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="search=sc.steeleye.com,steeleye.com,sc6.steeleye.com nameservers=172.17.4.60,172.17.4.1,2001:5c0:110e:3300::1">
+        <Label>Resolv</Label>
+      </Property>
+      <Property ovf:key="gateway" ovf:type="string" ovf:userConfigurable="true" ovf:value="ipv4=172.17.107.254 ipv6=2001:5c0:110e:3368::254">
+        <Label>Gateway</Label>
+      </Property>
+      <Property ovf:key="if" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=1 label=se0 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5c0:110e:3368::69:3c ipv6-prefix=64 ;; if=2 label=se1 ipv4=10.1.0.60 ipv4-prefix=24 ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0">
+        <Label>Interfaces</Label>
+      </Property>
+      <Property ovf:key="alias" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=2 label=se1:1 ipv4=10.2.0.60 ipv4-prefix=24">
+        <Label>Aliases</Label>
+      </Property>
+      <Property ovf:key="bond" ovf:type="string" ovf:userConfigurable="true" ovf:value="label=bond0 if-slaves=3,4 ipv4=10.3.0.60 ipv4-prefix=24">
+        <Label>Bonded</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="host">
+      <Info>Information about the installed software</Info>
+      <Category>Host</Category>
+      <Property ovf:key="locale" ovf:type="string" ovf:userConfigurable="true" ovf:value="change=n lang=EN|DE|KR|JP">
+        <Label>Locale</Label>
+      </Property>
+      <Property ovf:key="updates" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n">
+        <Label>Updates</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="apparmor">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Security</Category>
+      <Property ovf:key="security" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n syslog-emerg=y">
+        <Label>AppArmor</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="sshd">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Security</Category>
+      <Property ovf:key="security" ovf:type="string" ovf:userConfigurable="true" ovf:value="permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y">
+        <Label>SSH Daemon</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="syslog">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Report</Category>
+      <Property ovf:key="report" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=y server=syslogs.sc.sios.com">
+        <Label>SYSLOG</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="snmp">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Report</Category>
+      <Property ovf:key="report" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y community=defCommunity%20sessnmp">
+        <Label>SNMP</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="ntp">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Time</Category>
+      <Property ovf:key="time" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y servers=ntp1.sc.sios.com">
+        <Label>Network Time [NTP]</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="apache">
+      <Info>Information about the installed software</Info>
+      <Category>Services::App</Category>
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Apache</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="mq">
+      <Info>Information about the installed software</Info>
+      <Category>Services::App</Category>
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true">
+        <Label>IBM WebSphere MQ Server</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="nfs">
+      <Info>Information about the installed software</Info>
+      <Category>Services::App</Category>
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n version=4 storage-device=/dev/mapper/mapthap1 data-directory=/srv/fvorge-nfs fs-type=ext3 clear-storage=n virtualip=cae-qa-r113.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+        <Label>Network File System [NFS]</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="postfix">
+      <Info>Information about the installed software</Info>
+      <Category>Services::App</Category>
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Postfix</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="samba">
+      <Info>Information about the installed software</Info>
+      <Category>Services::App</Category>
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n confpath=/etc/samba/fvorge-samba-a.conf lockpath=/var/run/samba/fvorge-locks-a logpath=/var/log/fvorge-samba-a pidpath=/var/run/samba/fvorge-pid-a sharepath=/srv/fvorge-samba-share-a netbiosname=FVORGE-SAMBA-A workgroup=FVORGE-QA sharename=fvorge-share-a storage-device=/dev/mapper/mpathdp1 clear-storage=y virtual-ip=cae-qa-r116.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+        <Label>SAMBA</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="sap">
+      <Info>Information about the installed software</Info>
+      <Category>Services::App</Category>
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true">
+        <Label>SAP</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="db2">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Database</Category>
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true">
+        <Label>IBM DB2 Database</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="mysql">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Database</Category>
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-mysql port=3306 storage-device=/dev/mapper/mpathbp1 fs-type=ext3 virtualip=cae-qa-r114.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+        <Label>MySQL</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="oracle">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Database</Category>
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n">
+        <Label>Oracle</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="postgresql">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Database</Category>
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-pgsql port=5432 storage-device=/dev/mapper/mpathcp1 clear-storage=y initdb=y virtualip=cae-qa-r115.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+        <Label>PostgreSQL</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="sapdb">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Database</Category>
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n virtaulip=cae-qa-r117.sc.sios.com virtualip-prefix=22 virtaulip-if=se1">
+        <Label>SAPDB</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="sybase">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Database</Category>
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n">
+        <Label>Sybase</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="xserver">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Graphics</Category>
+      <Property ovf:key="graphic" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y">
+        <Label>X Server</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="iscsi">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Storage</Category>
+      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y portal=iscsi.sc.sios.com initiatorname=iqn.2013-01.com.sios.qa.init:00-00-00-00-000-## targetiqn=iqn.2013-01.com.sios.qa.target:00-00-00-00-000">
+        <Label>ISCSI</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="multipath">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Storage</Category>
+      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y">
+        <Label>Multipath</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="service" ovf:instance="md">
+      <Info>Information about the installed software</Info>
+      <Category>Services::Storage</Category>
+      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Multiple Devices [MD]</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="storage">
+      <Info>Information about the installed software</Info>
+      <Category>Storage</Category>
+      <Property ovf:key="fs" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Filesystems</Label>
+      </Property>
+      <Property ovf:key="lvm" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Logical Volumes [LVM]</Label>
+      </Property>
+      <Property ovf:key="md" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Multiple Devices [MD]</Label>
+      </Property>
+    </ProductSection>
+    <ProductSection ovf:class="custom">
+      <Info>Information about the installed software</Info>
+      <Category>Custom</Category>
+      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Network</Label>
+      </Property>
+      <Property ovf:key="packages" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Packages</Label>
+      </Property>
+      <Property ovf:key="host-services" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Host Services</Label>
+      </Property>
+      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true">
+        <Label>Storage</Label>
+      </Property>
+      <Property ovf:key="app-services" ovf:type="string" ovf:userConfigurable="true">
+        <Label>App Services</Label>
+      </Property>
+    </ProductSection>

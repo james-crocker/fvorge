@@ -3,3 +3,6 @@ Ubuntu 14.04 beta x86_64
 OpenSSH from install
 apt-get install ntp
 apt-get install libswitch-perl
+Ubuntu 14.04 Server has unattended-upgrades already installed
+
+If ifenslave is not installed then bonded interfaces will hang until the package can be installed and the host restarted.

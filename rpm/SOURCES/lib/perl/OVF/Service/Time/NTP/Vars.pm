@@ -143,7 +143,7 @@ $common{'Ubuntu'} = {
 					substitute => {
 						1 => {
 							unique  => 1,
-							regex   => q{^server\s},
+							regex   => q{^server\s+},
 							content => q{}
 						},
 					}

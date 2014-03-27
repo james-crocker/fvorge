@@ -97,9 +97,9 @@ export LANGUAGE="<LOCALE_LANG>"}
 
 $common{'Ubuntu'} = {
     'packages' => {
-        'DE' => [ 'languages-pack-de', 'languages-pack-de-base', 'manpages-de' ],
-        'KR' => [ 'languages-pack-ko', 'languages-pack-ko-base', 'manpages-ko'],
-        'JP' => [ 'languages-pack-ja', 'languages-pack-ja-base', 'manpages-ja' ]
+        'DE' => [ 'language-pack-de', 'language-pack-de-base', 'manpages-de' ],
+        'KR' => [ 'language-pack-ko', 'language-pack-ko-base', 'manpages-ko'],
+        'JP' => [ 'language-pack-ja', 'language-pack-ja-base', 'manpages-ja' ]
     },
     'LANG' => {
         'EN' => 'en_US.UTF-8',

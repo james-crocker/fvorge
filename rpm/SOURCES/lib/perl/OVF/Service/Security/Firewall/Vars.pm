@@ -54,6 +54,18 @@ $common{'SLES'} = {
 	}
 };
 
+$common{'Ubuntu'} = {
+    'init' => {
+        'ufw' => {
+            path  => '/usr/sbin/ufw',
+            stop  => '/usr/sbin/ufw disable',
+            start => '/usr/sbin/ufw enable',
+            off   => '/usr/sbin/ufw disable',
+            on    => '/usr/sbin/ufw enable',
+        }
+    }
+};
+
 $firewall{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'};
 $firewall{'RHEL'}{6}{0}{'x86_64'} = $common{'RHEL'};
 $firewall{'RHEL'}{6}{1}{'x86_64'} = $common{'RHEL'};
@@ -74,5 +86,8 @@ $firewall{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $firewall{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $firewall{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $firewall{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$firewall{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$firewall{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

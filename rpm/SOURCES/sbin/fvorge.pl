@@ -423,7 +423,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		EN english, DE german, KR korean, JP japanese (ALL are *.UTF-8)
                 
 	Updates [host.updates]: (may be empty)
-		enabled=n (DEFAULT is NO, currently only applicable to CentOS)
+		enabled=n (DEFAULT is NO, currently only applicable to CentOS and Ubuntu)
         	
 
 =end text
@@ -509,7 +509,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 -------------------------
 	AppArmor [service.security.apparmor]: (may be empty) OS default is ENABLED
 		enabled=y
-        syslog-emerg=y (to enable fix of AppArmor syslog EMERG notices to console)
+        syslog-emerg=y (SLES enable fix of AppArmor syslog EMERG notices to console)
 
 	SELINUX [service.security.selinux]: (may be empty) OS default is ENABLED
 		enabled=n
@@ -527,8 +527,11 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		packages=y
 		packages-32bit=y (Default is No)
 		enabled=n
-		+server=ldap.sc.steeleye.com
+		+server=ldap.sc.steeleye.com (Ubuntu: ldap://<server>, ldaps://<server>, ldapi://<domainSocketUrlEncoded>)
 		+basedn=dc%3Dsteeleye,dc%3Dcom
+		rootbindpw=<password>
+		rootbinddn=cn%3Dmanager,dc%3Dexample,dc%3Dnet
+		binddn=cn%3Dproxyuser,dc%3Dexample,dc%3Dnet		
 
 	SNMP [service.report.snmp]: (may be empty) OS default is NO Packages, DISABLED
 		packages=n
@@ -536,10 +539,14 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		+community=defCommunity%20sesnmp
 
 	SSHD [service.security.sshd]: (may be empty) OS default is original distro config settings for sshd_config
-		permit-root-login=y
+		permit-root=y
 		rsa-auth=y
 		gssapi-auth=n
 		pubkey-auth=y
+		x11forwarding=n
+		tcpforwarding=n
+		password-auth=y
+		userpam=y		
 		
 	SSHD [service.security.sshd.userconfig]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
 	    *uid=username
@@ -555,6 +562,11 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	SYSLOG [service.report.syslog]: (syslog, rsyslog, syslog-ng) (may be empty) OS default is NO central syslog messaging
 		enabled=y
 		+server=syslogs.sc.steeleye.com
+		port=714 (Default 514)
+		protocol=udp (Default TCP)
+		faciltiy=local6.* (Default *.*)
+		
+		EXAMPLE: enabled=y server=syslogs.sc.steeleye.com port=514 protocol=tcp facility=local6.info
 
 	X-server [service.graphic.xserver]: (may be empty) OS default is NO Packages
 		packages=y
@@ -653,8 +665,8 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
         
 		EXAMPLE: action=create pv-device=/dev/sdb,/dev/sdc partitions=2 mount-path=/srv/fvorge-lva1,/srv/fvorge-lva2 fs-type=ext3,ext4 fstab=y,y fstab-options=[noatime],[noacl] ;; ...
 		
-	LVM [storage.lvm.options]: (may be empty) OS default is NO onboot
-		onboot=y (Primarily for SLES, RHEL appears to have VG available on reboot)
+	LVM [storage.lvm.options]: (may be empty) OS default is NO booton
+		booton=y (Primarily for SLES, RHEL appears to have VG available on reboot)
 		
 =end text
 =item B<Services>

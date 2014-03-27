@@ -42,13 +42,13 @@ sub apply ( \% ) {
 	my $propertySetupArgs = 'sios.setup-args';
 	my $propertyProduct   = 'sios.product';
 
+    if ( !defined $OVF::SIOS::Product::Vars::product{$distro}{$major}{$minor}{$arch} ) {
+        Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
+        return;
+    }
+    
 	if ( !defined $options{ovf}{current}{$propertySetup} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $propertySetup undefined} );
-		return;
-	}
-
-	if ( !defined $OVF::SIOS::Product::Vars::product{$distro}{$major}{$minor}{$arch} ) {
-		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
 

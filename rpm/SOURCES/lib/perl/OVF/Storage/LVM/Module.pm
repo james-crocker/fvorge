@@ -83,7 +83,7 @@ sub apply ( \% ) {
 		manage( $lvNum, $lvAction, \%options );
 	}
 
-	my $propertyOnboot = 'storage.lvm.option.onboot';
+	my $propertyOnboot = 'storage.lvm.option.booton';
 	if ( $distro eq 'SLES' and OVF::State::ovfIsChanged( $propertyOnboot, %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action Options OnBoot ...} );
 		if ( $options{ovf}{current}{$propertyOnboot} ) {

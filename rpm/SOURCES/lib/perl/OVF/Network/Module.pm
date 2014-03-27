@@ -241,7 +241,7 @@ sub create ( \% ) {
 						$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
 						$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search \n};
 					}
-					
+
 				}
 
 			}
@@ -366,11 +366,11 @@ sub create ( \% ) {
 				$ifAliasTemplate{path} =~ s/<IF_LABEL>/$label/g;
 				$ifAliasTemplate{apply}{1}{content} .= qq{auto $label\n};
 				$ifAliasTemplate{apply}{1}{content} .= qq{iface $label inet static\n};
-				$ifAliasTemplate{apply}{1}{content} .= qq{\address $ipv4/$ipv4Prefix\n};
+				$ifAliasTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
 
 				if ( $ipv6 ne '' and $ipv6Prefix ne '' ) {
 					$ifAliasTemplate{apply}{1}{content} .= qq{iface $label inet6 static\n};
-					$ifAliasTemplate{apply}{1}{content} .= qq{\address $ipv6/$ipv6Prefix\n};
+					$ifAliasTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
 				}
 
 				$generatedFiles{"ifAlias-$label"} = \%ifAliasTemplate;
@@ -463,14 +463,22 @@ sub create ( \% ) {
 				}
 
 				if ( $bondOptions ) {
-					my @options = split( /\s/, $bondOptions );
+					my @options = split( /\s+/, $bondOptions );
 					foreach my $opt ( @options ) {
-						my ( $key, $value ) = split( /\s*=\*/, $opt );
-						$ifBondTemplate{apply}{1}{content} .= qq{$key $value\n};
+						my ( $key, $value ) = split( /=/, $opt );
+						$ifBondTemplate{apply}{1}{content} .= qq{bond-$key $value\n};
 					}
 				}
 
+                my $bondedSlaves;
+                foreach my $slave ( @slaves ) {
+                    $bondedSlaves .= $netIf{$slave}{label} . q{ };
+                }
+                
+				$ifBondTemplate{apply}{1}{content} .= qq{bond-slaves $bondedSlaves};
+				
 			} else {
+
 				$ifBondTemplate{path}              =~ s/<IF_LABEL>/$label/g;
 				$ifBondTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
 				$ifBondTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
@@ -484,6 +492,7 @@ sub create ( \% ) {
 				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
 				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
 				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
+
 			}
 
 			if ( $distro eq 'SLES' ) {
@@ -491,7 +500,6 @@ sub create ( \% ) {
 				# SYNTAX EXAMPLE: BONDING_SLAVE0='eth0'
 				my @bondSlaves;
 				my $bondCount = 1;
-				my @slaves = split( /,/, $netBond{$ifNum}{'if-slaves'} );
 				foreach my $slave ( @slaves ) {
 					push( @bondSlaves, qq{BONDING_SLAVE$bondCount='} . $netIf{$slave}{label} . q{'} );
 					$bondCount++;

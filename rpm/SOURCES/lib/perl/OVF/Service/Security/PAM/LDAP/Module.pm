@@ -36,19 +36,19 @@ sub apply ( \% ) {
 	my $distro = $options{ovf}{current}{'host.distribution'};
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
-	
+
 	my $property = 'service.security.pam.ldap.enabled';
 
 	if ( !defined $OVF::Service::Security::PAM::LDAP::Vars::pam{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
-	
+
 	if ( !defined $options{ovf}{current}{$property} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $property undefined} );
 		return;
 	}
-	
+
 	if ( !OVF::State::ovfIsChanged( $property, %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO changes to apply; Current $property same as Previous property} );
 	} else {
@@ -58,7 +58,7 @@ sub apply ( \% ) {
 		} else {
 			disable( \%options );
 		}
-	} 
+	}
 
 }
 
@@ -80,10 +80,33 @@ sub enable ( \% ) {
 	my $requiredEnabled = [ 'service.security.pam.ldap.server', 'service.security.pam.ldap.basedn' ];
 	return if ( OVF::State::checkRequired( $action, $required, 'service.security.pam.ldap.enabled', $requiredEnabled, %options ) );
 
-	$pamVars{task}{enable}[ 0 ] =~ s/<LDAP_SERVER>/$options{ovf}{current}{'service.security.pam.ldap.server'}/;
-	$pamVars{task}{enable}[ 0 ] =~ s/<LDAP_BASEDN>/$options{ovf}{current}{'service.security.pam.ldap.basedn'}/;
+	if ( $distro eq 'Ubuntu' ) {
+		
+		if ( !defined $options{ovf}{current}{'service.security.pam.ldap.rootbindpw'} ) {
+			$options{ovf}{current}{'service.security.pam.ldap.rootbindpw'} = '';
+		}
+		if ( !defined $options{ovf}{current}{'service.security.pam.ldap.rootbinddn'} ) {
+			$options{ovf}{current}{'service.security.pam.ldap.rootbinddn'} = '';
+		}
+		if ( !defined $options{ovf}{current}{'service.security.pam.ldap.binddn'} ) {
+			$options{ovf}{current}{'service.security.pam.ldap.binddn'} = '';
+		}
+
+		$pamVars{files}{'ldap-auth-config'}{apply}{1}{content} =~ s/<LDAP_SERVER>/$options{ovf}{current}{'service.security.pam.ldap.server'}/;
+		$pamVars{files}{'ldap-auth-config'}{apply}{1}{content} =~ s/<LDAP_BASEDN>/$options{ovf}{current}{'service.security.pam.ldap.basedn'}/;
+		$pamVars{files}{'ldap-auth-config'}{apply}{1}{content} =~ s/<LDAP_ROOTBINDPW>/$options{ovf}{current}{'service.security.pam.ldap.rootbindpw'}/;
+		$pamVars{files}{'ldap-auth-config'}{apply}{1}{content} =~ s/<LDAP_ROOTBINDDN>/$options{ovf}{current}{'service.security.pam.ldap.rootbinddn'}/;
+		$pamVars{files}{'ldap-auth-config'}{apply}{1}{content} =~ s/<LDAP_BINDDN>/$options{ovf}{current}{'service.security.pam.ldap.binddn'}/;
+	} else {
+		$pamVars{task}{enable}[ 0 ] =~ s/<LDAP_SERVER>/$options{ovf}{current}{'service.security.pam.ldap.server'}/;
+		$pamVars{task}{enable}[ 0 ] =~ s/<LDAP_BASEDN>/$options{ovf}{current}{'service.security.pam.ldap.basedn'}/;
+	}
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
+
+	if ( $pamVars{files} ) {
+		OVF::Manage::Files::create( %options, %{ $pamVars{files} } );
+	}
 
 	OVF::Manage::Tasks::run( %options, @{ $pamVars{task}{enable} } );
 

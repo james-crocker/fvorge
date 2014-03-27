@@ -1,0 +1,3 @@
+mv /tmp/* /opt/fvorge/.
+cd /opt/fvorge/lib/OVF
+ln -s ubuntu-min-ovf.xml ovf-defaults.xml

@@ -42,8 +42,11 @@ $common{'RHEL'} = {
 };
 
 $common{'SLES'} = Storable::dclone( $common{'RHEL'} );
+$common{'Ubuntu'} = Storable::dclone( $common{'RHEL'} );
 
 $common{'SLES'}{packages} = [ 'net-snmp' ];
+$common{'Ubuntu'}{packages} = [ 'snmp' ];
+$common{'Ubuntu'}{path} = '/etc/snmp/snmp.conf';
 
 $snmp{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'};
 $snmp{'RHEL'}{6}{0}{'x86_64'} = $common{'RHEL'};
@@ -65,5 +68,8 @@ $snmp{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $snmp{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $snmp{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $snmp{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$snmp{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$snmp{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;
