@@ -45,7 +45,7 @@ my @previousOvfProperties;
 
 my $originalsPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{path};
 
-my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|service.security.sshd.userconfig|custom\..+)$};
+my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|service\.security\.ssh\.user\.config|custom\..+)$};
 my $yesRegex          = 'y|yes|true|t|1';
 my $noRegex           = 'n|no|false|f|0';
 my $saneKeyRegex      = q{[a-z\-\_\.0-9]+};

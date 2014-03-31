@@ -6,7 +6,7 @@
       <ProductUrl>http://fvorge.us.sios.com/~fvorge/latest</ProductUrl>
       <VendorUrl>http://us.sios.com</VendorUrl>
       <Category>Host</Category>
-      <Property ovf:key="host" ovf:type="string" ovf:userConfigurable="true" ovf:value="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=000 instance=1">
+      <Property ovf:key="host" ovf:type="string" ovf:userConfigurable="false" ovf:value="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=000 instance=1">
         <Label>Platform</Label>
       </Property>
       <Category>Networking</Category>
@@ -17,7 +17,7 @@
     <ProductSection ovf:class="network">
       <Info>Information about the installed software</Info>
       <Category>Networking</Category>
-      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="search=sc.steeleye.com,steeleye.com,sc6.steeleye.com nameservers=172.17.4.60,172.17.4.1,2001:5c0:110e:3300::1">
+      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="precedence=ipv4  search=sc.steeleye.com,steeleye.com,sc6.steeleye.com nameservers=172.17.4.60,172.17.4.1,2001:5c0:110e:3300::1">
         <Label>Resolv</Label>
       </Property>
       <Property ovf:key="gateway" ovf:type="string" ovf:userConfigurable="true" ovf:value="ipv4=172.17.107.254 ipv6=2001:5c0:110e:3368::254">
@@ -206,19 +206,19 @@
     <ProductSection ovf:class="custom">
       <Info>Information about the installed software</Info>
       <Category>Custom</Category>
-      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true">
+      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true" ovf:value="priority=before action=/bin/true ;; priority=after action=/bin/true">
         <Label>Network</Label>
       </Property>
-      <Property ovf:key="packages" ovf:type="string" ovf:userConfigurable="true">
+      <Property ovf:key="packages" ovf:type="string" ovf:userConfigurable="true" ovf:value="priority=before action=/bin/true ;; priority=after action=/bin/true">
         <Label>Packages</Label>
       </Property>
-      <Property ovf:key="host-services" ovf:type="string" ovf:userConfigurable="true">
+      <Property ovf:key="host-services" ovf:type="string" ovf:userConfigurable="true" ovf:value="priority=before action=/bin/true ;; priority=after action=/bin/true">
         <Label>Host Services</Label>
       </Property>
-      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true">
+      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true" ovf:value="priority=badtest action=/bin/true ;; priority=after action=/bin/true">
         <Label>Storage</Label>
       </Property>
-      <Property ovf:key="app-services" ovf:type="string" ovf:userConfigurable="true">
+      <Property ovf:key="app-services" ovf:type="string" ovf:userConfigurable="true" ovf:value="priority=before action=/bin/true ;; priority=badtest action=/bin/true">
         <Label>App Services</Label>
       </Property>
     </ProductSection>

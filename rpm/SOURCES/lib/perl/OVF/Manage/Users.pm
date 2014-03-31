@@ -39,40 +39,38 @@ sub create ( \%\% ) {
 	my ( %options )   = %{ ( shift ) };
 	my ( %ovfObject ) = %{ ( shift ) };
 
-	my $action    = $thisSubName;
-
-	my $addCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{addCmd};
+	my $action = $thisSubName;
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
 	# CREATE Groups FIRST as USER creation may rely on them existing first.
 
-	my $myAddCmd = $addCmd;
 	foreach my $user ( keys %ovfObject ) {
 
-		$myAddCmd =~ s/<HOME_DIR>/"$ovfObject{$user}{homeDir}"/;
-		$myAddCmd =~ s/<UID>/$ovfObject{$user}{uid}/;
-		$myAddCmd =~ s/<GID>/$ovfObject{$user}{gid}/;
-		$myAddCmd =~ s/<PASSWD>/"$ovfObject{$user}{passwd}"/;
-		$myAddCmd =~ s/<COMMENT>/"$ovfObject{$user}{comment}"/;
-		$myAddCmd =~ s/<SHELL>/"$ovfObject{$user}{shell}"/;
-		
+		my $addCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{addCmd};
+
+		$addCmd =~ s/<HOME_DIR>/"$ovfObject{$user}{homeDir}"/;
+		$addCmd =~ s/<UID>/$ovfObject{$user}{uid}/;
+		$addCmd =~ s/<GID>/$ovfObject{$user}{gid}/;
+		$addCmd =~ s/<PASSWD>/"$ovfObject{$user}{passwd}"/;
+		$addCmd =~ s/<COMMENT>/"$ovfObject{$user}{comment}"/;
+		$addCmd =~ s/<SHELL>/"$ovfObject{$user}{shell}"/;
+
 		if ( $ovfObject{$user}{'extra-args'} ) {
-			$myAddCmd .= ' '.$ovfObject{$user}{'extra-args'};
+			$addCmd .= ' ' . $ovfObject{$user}{'extra-args'};
 		}
 
-		Sys::Syslog::syslog( 'info', qq{$action $myAddCmd $user ...} );
-		
-		my $retVal = system( qq{$myAddCmd $user $quietCmd} );
+		Sys::Syslog::syslog( 'info', qq{$action $addCmd $user ...} );
+
+		my $retVal = system( qq{$addCmd $user $quietCmd} );
 		if ( $retVal == 0 ) {
+
 			# Create SSH user config
 			# DISABLED 20140324 - TODO refactor for changes in createUserConfig routine
-			#OVF::Service::Security::SSH::Apply::createUserConfig( \%options, $ovfObject{$user}{homeDir}, $ovfObject{$user}{uid}, $ovfObject{$user}{gid} );	
+			#OVF::Service::Security::SSH::Apply::createUserConfig( \%options, $ovfObject{$user}{homeDir}, $ovfObject{$user}{uid}, $ovfObject{$user}{gid} );
 		} else {
-			Sys::Syslog::syslog( 'warning', qq{$action Couldn't ($myAddCmd $user) ($?:$!)} );	
+			Sys::Syslog::syslog( 'warning', qq{$action Couldn't ($addCmd $user) ($?:$!)} );
 		}
-
-		$myAddCmd = $addCmd;
 
 	}
 
@@ -87,7 +85,7 @@ sub destroy ( \%\% ) {
 	my ( %options )   = %{ ( shift ) };
 	my ( %ovfObject ) = %{ ( shift ) };
 
-	my $action    = $thisSubName;
+	my $action = $thisSubName;
 
 	my $destroyCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{destroyCmd};
 
@@ -96,6 +94,33 @@ sub destroy ( \%\% ) {
 	foreach my $user ( keys %ovfObject ) {
 		Sys::Syslog::syslog( 'info', qq{$action $destroyCmd $user ...} );
 		system( qq{$destroyCmd $user $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't ($destroyCmd $user) ($?:$!)} );
+	}
+
+	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
+
+}
+
+sub changePassword ( \%\% ) {
+
+	my $thisSubName = ( caller( 0 ) )[ 3 ];
+
+	my ( %options )   = %{ ( shift ) };
+	my ( %ovfObject ) = %{ ( shift ) };
+
+	my $action = $thisSubName;
+
+	Sys::Syslog::syslog( 'info', qq{$action INITIATE ... } );
+
+	foreach my $user ( keys %ovfObject ) {
+		if ( defined $ovfObject{$user}{passwd} ) {
+			my $passwdCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{passwdCmd};
+			$passwdCmd =~ s/<PASSWD>/$ovfObject{$user}{passwd}/;
+			$passwdCmd =~ s/<USER>/$user/;
+			Sys::Syslog::syslog( 'info', qq{$action ($user) ...} );
+			system( qq{$passwdCmd $user $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't change password for ($user) ($?:$!)} );
+		} else {
+			Sys::Syslog::syslog( 'err', qq{$action UDEFINED PASSWORD FOR USER ($user) PASSWORD WAS NOT CHANGED!} );
+		}
 	}
 
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );

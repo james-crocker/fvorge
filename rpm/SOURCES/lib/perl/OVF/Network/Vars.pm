@@ -474,6 +474,20 @@ $common{'Ubuntu'} = {
 					content => q{SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="<IF_MAC>", ATTR{type}=="1", KERNEL=="eth*", NAME="<IF_LABEL>"}
 				}
 			}
+		},
+		'gai-precedence' => {
+			path => '/etc/gai.conf',
+			apply => {
+				1 => {
+					'substitute' => {
+                        1 => {
+                        	unique  => 1,
+                            regex   => q{^(#|)\s*precedence\s+::ffff:0:0/96\s+100},
+                            content => q{precedence ::ffff:0:0/96  100}
+                        }
+                    }
+                }
+			}
 		}
 	}
 };

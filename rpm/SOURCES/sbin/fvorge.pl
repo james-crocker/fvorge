@@ -55,6 +55,7 @@ use OVF::Service::Security::PAM::LDAP::Module;
 use OVF::Service::Security::PAM::LDAP::Packages;
 use OVF::Service::Security::SELINUX::Module;
 use OVF::Service::Security::SSH::Apply;
+use OVF::Service::Security::User::Deployed::Module;
 use OVF::Service::Storage::ISCSI::Module;
 use OVF::Service::Storage::ISCSI::Packages;
 use OVF::Service::Storage::Multipath::Module;
@@ -104,6 +105,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	Sys::Syslog::syslog( 'info', qq{$action APPLY ...} );
 
 	OVF::Custom::Module::apply( $customGroup, 'before', %options );
+	OVF::Service::Security::User::Deployed::Module::changePassword( %options );
 	OVF::Network::Module::apply( %options );
 	OVF::Service::Security::SSH::Apply::sshdConfig( %options );
 	OVF::Service::Security::SSH::Apply::createUserConfig( %options );
@@ -311,9 +313,11 @@ The order of ovf processing is:
 
 Network
 	OVF::Custom::Module::apply( 'custom.network', 'before' )
+    OVF::Service::Security::User::Deployed::changePassword( %options );
 	OVF::Network::Module::apply
 	OVF::Service::Security::SSH::Apply::sshdConfig
 	OVF::Service::Security::SSH::Apply::createUserConfig
+	OVF::Custom::Module::apply( 'custom.network', 'after' )
 	--reboot--
 Packages
 	OVF::Custom::Module::apply( 'custom.packages', 'before' )
@@ -445,6 +449,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	Resolv [network.resolv]: (required)
 		*search=sc.steeleye.com,sc6.steeleye.com,steeleye.com
 		*nameservers=172.17.4.1,172.17.4.60
+		precedence=ipv4 (Ubuntu ONLY. Set DNS lookup preference to favor ipv4. Default is ipv6)
 
 	'REAL' interfaces [network.if]: (required)
 		IPv4 only, IPv6 only or BOTH 		
@@ -548,7 +553,10 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		password-auth=y
 		userpam=y		
 		
-	SSHD [service.security.sshd.userconfig]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
+    Depolyed Admin Password [service.security.user.deployed.admin.password]: (must be defined, if not the default deployed admin password will NOT be changed.)
+        Make sure to use a complex password. If not then at least disable SSH password authentication.        
+		
+	SSH [service.security.ssh.user.config]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
 	    *uid=username
 	    *gid=groupname
 	    *home=user home path

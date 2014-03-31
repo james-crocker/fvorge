@@ -96,7 +96,8 @@ sub create ( \% ) {
 
 	my $resolvSearch = $options{ovf}{current}{'network.resolv.search'};
 	my $resolvNames  = $options{ovf}{current}{'network.resolv.nameservers'};
-	my $ipv4Gateway  = $options{ovf}{current}{'network.gateway.ipv4'};
+
+	my $ipv4Gateway = $options{ovf}{current}{'network.gateway.ipv4'};
 
 	my $ipv6Gateway = '';
 	if ( $options{ovf}{current}{'network.gateway.ipv6'} ) {
@@ -111,13 +112,25 @@ sub create ( \% ) {
 	my @nameservers = split( /,/, $resolvNames );
 
 	if ( %resolvTemplate and $distro ne 'Ubuntu' ) {
+
 		$resolvTemplate{apply}{1}{content} .= q{domain } . $domainName . qq{\n};
 		$resolvTemplate{apply}{1}{content} .= qq{search $search\n};
 		foreach my $nameserver ( @nameservers ) {
 			$resolvTemplate{apply}{1}{content} .= qq{nameserver $nameserver\n};
 		}
+
 		$generatedFiles{resolv} = \%resolvTemplate;
 
+		my $resolvPrecedence = 'ipv6';
+		if ( defined $options{ovf}{current}{'network.resolv.precedence'} and $options{ovf}{current}{'network.resolv.precedence'} eq 'ipv4' ) {
+			$resolvPrecedence = $options{ovf}{current}{'network.resolv.precedence'};
+			my %gaiPrecedence = %{ Storable::dclone( $networkVars{files}{'gai-precedence'} ) } if ( defined $networkVars{files}{'gai-precedence'} );
+
+			if ( %gaiPrecedence and $resolvPrecedence eq 'ipv4' ) {
+				$generatedFiles{'gai-precedence'} = \%gaiPrecedence;
+			}
+
+		}
 	}
 
 	# Markup the hostname
@@ -470,13 +483,13 @@ sub create ( \% ) {
 					}
 				}
 
-                my $bondedSlaves;
-                foreach my $slave ( @slaves ) {
-                    $bondedSlaves .= $netIf{$slave}{label} . q{ };
-                }
-                
+				my $bondedSlaves;
+				foreach my $slave ( @slaves ) {
+					$bondedSlaves .= $netIf{$slave}{label} . q{ };
+				}
+
 				$ifBondTemplate{apply}{1}{content} .= qq{bond-slaves $bondedSlaves};
-				
+
 			} else {
 
 				$ifBondTemplate{path}              =~ s/<IF_LABEL>/$label/g;

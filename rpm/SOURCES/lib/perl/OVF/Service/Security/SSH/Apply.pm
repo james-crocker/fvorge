@@ -47,28 +47,31 @@ sub createUserConfig ( \% ) {
 	my $distro = $options{ovf}{current}{'host.distribution'};
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
+	
+	my $ovfProperty = 'service.security.ssh.user.config';
 
 	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSH Vars not available } ) and return ) if ( !defined $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} );
+	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $ovfProperty not defined } ) and return ) if ( !defined $options{ovf}{current}{$ovfProperty} );
 
-	my %sshUserConfig = %{ $options{ovf}{current}{'service.security.sshd.userconfig'} };
+	my %sshUserConfig = %{ $options{ovf}{current}{$ovfProperty} };
 	foreach my $num ( sort keys %sshUserConfig ) {
 
 		# Get a fresh set
 		my %sshVars = %{ Storable::dclone( $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} ) };
 
 		my $uid = $sshUserConfig{$num}{uid};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'uid' not defined } ) and next ) if ( !$uid );
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) 'uid' not defined } ) and next ) if ( !$uid );
 
 		my $gid = $sshUserConfig{$num}{gid};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'gid' not defined } ) and next ) if ( !$gid );
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) 'gid' not defined } ) and next ) if ( !$gid );
 
 		my $home = $sshUserConfig{$num}{home};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'home' not defined } ) and next ) if ( !$home );
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) 'home' not defined } ) and next ) if ( !$home );
 
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) 'genkeypair' not defined } ) and next ) if ( !defined $sshUserConfig{$num}{genkeypair} );
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) 'genkeypair' not defined } ) and next ) if ( !defined $sshUserConfig{$num}{genkeypair} );
 		my $genKeyPair = $sshUserConfig{$num}{genkeypair};
 
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: service.security.sshd.userconfig ($num) genkeypair=n; 'pubkey' and/or 'privkey' not defined } ) and next ) if ( !$genKeyPair and ( !defined $sshUserConfig{$num}{pubkey} or !defined $sshUserConfig{$num}{privkey} ) );
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) genkeypair=n; 'pubkey' and/or 'privkey' not defined } ) and next ) if ( !$genKeyPair and ( !defined $sshUserConfig{$num}{pubkey} or !defined $sshUserConfig{$num}{privkey} ) );
 
 		Sys::Syslog::syslog( 'info', qq{$action INITIATE (User: $uid) ... } );
 

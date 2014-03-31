@@ -219,6 +219,8 @@ $commonSshd{'Ubuntu'}{task} = {
 	'close-firewall' => [ '/usr/sbin/ufw deny OpenSSH' ]
 };
 
+$commonSshd{'Ubuntu'}{packages} = [ 'openssh-server' ];
+
 # SSH
 $ssh{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'};
 $ssh{'RHEL'}{6}{0}{'x86_64'} = $common{'RHEL'};

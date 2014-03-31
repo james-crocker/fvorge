@@ -130,6 +130,8 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::create'}{addCmd
 $sysCmds{'suse'}{$sysVersion}{$sysArch}{'OVF::Manage::Users::create'}{addCmd}      = 'useradd --home <HOME_DIR> --shell <SHELL> --gid <GID> --uid <UID> --password <PASSWD> --comment <COMMENT>';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Groups::create'}{addCmd} = 'groupadd --gid <GID>';
 
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::changePassword'}{passwdCmd}  = q{echo '<USER>:<PASSWD>' | chpasswd};
+
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::destroy'}{destroyCmd}  = 'userdel -f -r';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Groups::destroy'}{destroyCmd} = 'groupdel';
 
