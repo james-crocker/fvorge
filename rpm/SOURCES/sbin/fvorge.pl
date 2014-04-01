@@ -54,8 +54,9 @@ use OVF::Service::Security::Firewall::Module;
 use OVF::Service::Security::PAM::LDAP::Module;
 use OVF::Service::Security::PAM::LDAP::Packages;
 use OVF::Service::Security::SELINUX::Module;
-use OVF::Service::Security::SSH::Apply;
-use OVF::Service::Security::User::Deployed::Module;
+use OVF::Service::Security::SSH::Packages;
+use OVF::Service::Security::SSHD::Module;
+use OVF::Service::Security::SSHD::Packages;
 use OVF::Service::Storage::ISCSI::Module;
 use OVF::Service::Storage::ISCSI::Packages;
 use OVF::Service::Storage::Multipath::Module;
@@ -68,6 +69,10 @@ use OVF::SIOS::Automation::Module;
 use OVF::SIOS::Automation::Packages;
 use OVF::SIOS::Prerequisites::Packages;
 use OVF::SIOS::Product::Module;
+use OVF::User::Deployed::Module;
+use OVF::User::SSH::Module;
+
+
 
 use OVF::VApp;
 
@@ -105,10 +110,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	Sys::Syslog::syslog( 'info', qq{$action APPLY ...} );
 
 	OVF::Custom::Module::apply( $customGroup, 'before', %options );
-	OVF::Service::Security::User::Deployed::Module::changePassword( %options );
 	OVF::Network::Module::apply( %options );
-	OVF::Service::Security::SSH::Apply::sshdConfig( %options );
-	OVF::Service::Security::SSH::Apply::createUserConfig( %options );
 	OVF::Custom::Module::apply( $customGroup, 'after', %options );
 
 	OVF::State::propertiesSave( $group, %options );
@@ -146,6 +148,8 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	OVF::Network::Packages::apply( %options );
 	OVF::Service::Report::SNMP::Packages::apply( %options );
 	OVF::Service::Security::PAM::LDAP::Packages::apply( %options );
+	OVF::Service::Security::SSH::Packages::apply( %options );
+	OVF::Service::Security::SSHD::Packages::apply( %options );
 	OVF::Service::Storage::ISCSI::Packages::apply( %options );
 	OVF::Service::Storage::Multipath::Packages::apply( %options );
 	#OVF::Service::Storage::MD::Packages::apply( %options );
@@ -178,6 +182,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	OVF::Service::Security::SELINUX::Module::apply( %options );
 	OVF::Service::Security::Firewall::Module::apply( %options );
 	OVF::Service::Security::PAM::LDAP::Module::apply( %options );
+	OVF::Service::Security::SSHD::Module::apply( %options );
 	OVF::Service::Storage::ISCSI::Module::apply( %options );
 	OVF::Service::Storage::Multipath::Module::apply( %options );
 	#OVF::Service::Storage::MD::Module::apply( %options );
@@ -215,6 +220,25 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 
 } else {
 	Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: PREVIOUSLY APPLIED} );
+}
+
+$group = 'users';
+$customGroup = 'custom.'.$group;
+$action = "FVORGE $group";
+if ( !OVF::State::propertiesApplied( $group, %options ) ) {
+
+    Sys::Syslog::syslog( 'info', qq{$action APPLY ...} );
+
+    OVF::Custom::Module::apply( $customGroup, 'before', %options );
+    OVF::User::Deployed::Module::changePassword( %options );
+    OVF::User::SSH::Module::apply( %options );
+    OVF::Custom::Module::apply( $customGroup, 'after', %options );
+
+    OVF::State::propertiesSave( $group, %options );
+    Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
+
+} else {
+    Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: PREVIOUSLY APPLIED} );
 }
 
 $group = 'app-services';
@@ -313,10 +337,7 @@ The order of ovf processing is:
 
 Network
 	OVF::Custom::Module::apply( 'custom.network', 'before' )
-    OVF::Service::Security::User::Deployed::changePassword( %options );
 	OVF::Network::Module::apply
-	OVF::Service::Security::SSH::Apply::sshdConfig
-	OVF::Service::Security::SSH::Apply::createUserConfig
 	OVF::Custom::Module::apply( 'custom.network', 'after' )
 	--reboot--
 Packages
@@ -336,6 +357,8 @@ Packages
 	OVF::Network::Packages::apply
 	OVF::Service::Report::SNMP::Packages::apply
 	OVF::Service::Security::PAM::LDAP::Packages::apply
+	OVF::Service::Security::SSH::Packages::apply
+    OVF::Service::Security::SSHD::Packages::apply
 	OVF::Service::Storage::ISCSI::Packages::apply
 	OVF::Service::Storage::Multipath::Packages::apply
 	#OVF::Service::Storage::MD::Packages::apply
@@ -353,6 +376,7 @@ Host-Services
 	OVF::Service::Security::SELINUX::Module::apply
 	OVF::Service::Security::Firewall::Module::apply
 	OVF::Service::Security::PAM::LDAP::Module::apply
+	OVF::Service::Security::SSHD::Module::apply
 	OVF::Service::Storage::ISCSI::Module::apply
 	OVF::Service::Storage::Multipath::Module::apply
 	#OVF::Service::Storage::MD::Module::apply
@@ -367,6 +391,12 @@ Storage
 	#OVF::Storage::MD::Module::apply
 	OVF::Custom::Module::apply( 'custom.storage', 'after' )
 	--reboot--
+Users
+    OVF::Custom::Module::apply( 'custom.users', 'before' );
+    OVF::User::Deployed::Module::changePassword
+    OVF::User::SSH::Module::apply
+    OVF::Custom::Module::apply( 'custom.users', 'after' );
+    --NO-reboot--
 App-Services
 	OVF::Custom::Module::apply( 'custom.app-services', 'before' )
 	OVF::Service::App::NFS::Module::apply
@@ -398,9 +428,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 =begin text
 -------------------------
 
-	SSH Keys, common authorized_keys and config settings will be setup for 'root' user.
-
-	Architecture [host]:
+	Architecture [host]: (ovf value; but userConfigurable=false)
 	    *architecture=x86_64|i686
         *distribution=RHEL|CentOS|ORAL|SLES
         *major=#
@@ -428,6 +456,8 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
                 
 	Updates [host.updates]: (may be empty)
 		enabled=n (DEFAULT is NO, currently only applicable to CentOS and Ubuntu)
+		
+		On Ubuntu this enables unattended security updates.
         	
 
 =end text
@@ -512,6 +542,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 =item B<Base Services>
 =begin text
 -------------------------
+
 	AppArmor [service.security.apparmor]: (may be empty) OS default is ENABLED
 		enabled=y
         syslog-emerg=y (SLES enable fix of AppArmor syslog EMERG notices to console)
@@ -551,22 +582,13 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		x11forwarding=n
 		tcpforwarding=n
 		password-auth=y
-		userpam=y		
+		usepam=y
+		packages=y
+		enabled=y		
 		
-    Depolyed Admin Password [service.security.user.deployed.admin.password]: (must be defined, if not the default deployed admin password will NOT be changed.)
-        Make sure to use a complex password. If not then at least disable SSH password authentication.        
-		
-	SSH [service.security.ssh.user.config]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
-	    *uid=username
-	    *gid=groupname
-	    *home=user home path
-	    *genkeypair=y (if no; privkey and pubkey must be defined)
-	    privkey=... (ignored if genkeypair=n)
-	    pubkey=... (ignored if genkeypair=n)
-        authorizedkeys=authorized_key format seperate multiple with ',' (make sure to use %3D for = and %20 for spaces if either occur in your keys)
+    SSH Client [service.security.ssh]: (may be empty)
+        packages=y
         
-        EXAMPLE: uid=root gid=root home=/root genkeypair=y authorizedkeys=ssh-rsa%20 A...%3D%20usera@hosta,ssh-rsa%20A...H%20userb@hostb ;; uid=sios gid=sios home=/home/sios genkeypair=y
-
 	SYSLOG [service.report.syslog]: (syslog, rsyslog, syslog-ng) (may be empty) OS default is NO central syslog messaging
 		enabled=y
 		+server=syslogs.sc.steeleye.com
@@ -676,6 +698,25 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	LVM [storage.lvm.options]: (may be empty) OS default is NO booton
 		booton=y (Primarily for SLES, RHEL appears to have VG available on reboot)
 		
+=end text
+=item B<Users>
+=begin text
+-------------------------
+    Depolyed Admin Password [user.deployed.admin.password]: (must be defined, if not the default deployed admin password will NOT be changed.)
+        Make sure to use a complex password. If not then at least disable SSH password authentication.                
+        
+    SSH [user.ssh]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
+        *uid=username
+        *gid=groupname
+        *home=user home path
+        *genkeypair=y (if no; privkey and pubkey must be defined AND service.security.ssh enabled=y,packages=y)
+        privkey=... (ignored if genkeypair=n)
+        pubkey=... (ignored if genkeypair=n)
+        authorizedkeys=authorized_key format seperate multiple with ',' (make sure to use %3D for = and %20 for spaces if either occur in your keys)
+        
+        EXAMPLE: uid=root gid=root home=/root genkeypair=y authorizedkeys=ssh-rsa%20 A...%3D%20usera@hosta,ssh-rsa%20A...H%20userb@hostb ;; uid=sios gid=sios home=/home/sios genkeypair=y
+
+
 =end text
 =item B<Services>
 =begin text

@@ -15,16 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
 
-package OVF::Service::Security::SSH::Apply;
+package OVF::User::SSH::Module;
 
 use strict;
 use warnings;
 use Storable;
 
-use lib '../../../../../perl';
+use lib '../../../../perl';
 use OVF::Manage::Directories;
 use OVF::Manage::Files;
-use OVF::Service::Security::SSH::Vars;
+use OVF::User::SSH::Vars;
 use OVF::Vars::Common;
 use SIOS::CommonVars;
 
@@ -36,7 +36,7 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 # For surpressing stdout, stderr.
 my $quietCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd};
 
-sub createUserConfig ( \% ) {
+sub apply ( \% ) {
 
 	my %options = %{ ( shift ) };
 
@@ -47,17 +47,18 @@ sub createUserConfig ( \% ) {
 	my $distro = $options{ovf}{current}{'host.distribution'};
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
-	
-	my $ovfProperty = 'service.security.ssh.user.config';
 
-	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSH Vars not available } ) and return ) if ( !defined $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} );
+	my $ovfProperty = 'user.ssh';
+	my $sshPackages = 'service.security.ssh.packages';
+
+	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSH Vars not available } )   and return ) if ( !defined $OVF::User::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} );
 	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $ovfProperty not defined } ) and return ) if ( !defined $options{ovf}{current}{$ovfProperty} );
 
 	my %sshUserConfig = %{ $options{ovf}{current}{$ovfProperty} };
 	foreach my $num ( sort keys %sshUserConfig ) {
 
 		# Get a fresh set
-		my %sshVars = %{ Storable::dclone( $OVF::Service::Security::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} ) };
+		my %sshVars = %{ Storable::dclone( $OVF::User::SSH::Vars::ssh{$distro}{$major}{$minor}{$arch} ) };
 
 		my $uid = $sshUserConfig{$num}{uid};
 		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) 'uid' not defined } ) and next ) if ( !$uid );
@@ -72,6 +73,9 @@ sub createUserConfig ( \% ) {
 		my $genKeyPair = $sshUserConfig{$num}{genkeypair};
 
 		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) genkeypair=n; 'pubkey' and/or 'privkey' not defined } ) and next ) if ( !$genKeyPair and ( !defined $sshUserConfig{$num}{pubkey} or !defined $sshUserConfig{$num}{privkey} ) );
+
+		my $sshClientPackages = $options{ovf}{current}{$sshPackages} if ( defined $options{ovf}{current}{$sshPackages} );
+		( Sys::Syslog::syslog( 'err', qq{::SKIP:: $ovfProperty($num) genkeypair=y but !$sshPackages=y} ) and next ) if ( $genKeyPair and ( !$sshClientPackages ) );
 
 		Sys::Syslog::syslog( 'info', qq{$action INITIATE (User: $uid) ... } );
 
@@ -95,7 +99,6 @@ sub createUserConfig ( \% ) {
 		}
 
 		if ( $genKeyPair ) {
-
 			# Remove pub/priv key files from the later create since asked to generate the keypair
 			delete $sshVars{files}{pubkey};
 			delete $sshVars{files}{privkey};
@@ -120,92 +123,6 @@ sub createUserConfig ( \% ) {
 
 		Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 	}
-
-}
-
-sub sshdConfig ( \% ) {
-
-	my %options = %{ ( shift ) };
-
-	my $thisSubName = ( caller( 0 ) )[ 3 ];
-
-	my $action = $thisSubName;
-	my $arch   = $options{ovf}{current}{'host.architecture'};
-	my $distro = $options{ovf}{current}{'host.distribution'};
-	my $major  = $options{ovf}{current}{'host.major'};
-	my $minor  = $options{ovf}{current}{'host.minor'};
-
-	my $root   = $options{ovf}{current}{'service.security.sshd.permit-root'};
-	my $pubkey = $options{ovf}{current}{'service.security.sshd.pubkey-auth'};
-	my $gssapi = $options{ovf}{current}{'service.security.sshd.gssapi-auth'};
-	my $rsa    = $options{ovf}{current}{'service.security.sshd.rsa-auth'};
-	my $x11    = $options{ovf}{current}{'service.security.sshd.x11forwarding'};
-	my $tcp    = $options{ovf}{current}{'service.security.sshd.tcpforwarding'};
-	my $passwd = $options{ovf}{current}{'service.security.sshd.password-auth'};
-	my $usepam = $options{ovf}{current}{'service.security.sshd.usepam'};
-
-	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SSHD Vars not available } ) and return ) if ( !defined $OVF::Service::Security::SSH::Vars::sshd{$distro}{$major}{$minor}{$arch} );
-
-	my %sshdVars = %{ $OVF::Service::Security::SSH::Vars::sshd{$distro}{$major}{$minor}{$arch} };
-
-	# Remove settings if not requested
-	if ( !defined $root ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{1}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{1}{substitute}{1}{content} =~ s/<SSHD_YORN>/$root/;
-	}
-
-	if ( !defined $gssapi ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{2}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{2}{substitute}{1}{content} =~ s/<SSHD_YORN>/$gssapi/;
-	}
-
-	if ( !defined $rsa ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{3}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{3}{substitute}{1}{content} =~ s/<SSHD_YORN>/$rsa/;
-	}
-
-	if ( !defined $pubkey ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{4}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{4}{substitute}{1}{content} =~ s/<SSHD_YORN>/$pubkey/;
-	}
-
-	if ( !defined $x11 ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{5}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{5}{substitute}{1}{content} =~ s/<SSHD_YORN>/$x11/;
-	}
-
-	if ( !defined $tcp ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{6}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{6}{substitute}{1}{content} =~ s/<SSHD_YORN>/$tcp/;
-	}
-
-	if ( !defined $passwd ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{7}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{7}{substitute}{1}{content} =~ s/<SSHD_YORN>/$passwd/;
-	}
-
-	if ( !defined $usepam ) {
-		delete( $sshdVars{files}{'sshd_config'}{apply}{8}{substitute}{1} );
-	} else {
-		$sshdVars{files}{'sshd_config'}{apply}{8}{substitute}{1}{content} =~ s/<SSHD_YORN>/$usepam/;
-	}
-
-	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
-
-	if ( $distro eq 'SLES' or $distro eq 'Ubuntu' ) {
-		OVF::Manage::Tasks::run( %options, @{ $sshdVars{task}{'open-firewall'} } );
-	}
-
-	OVF::Manage::Files::create( %options, %{ $sshdVars{files} } );
-
-	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 
 }
 

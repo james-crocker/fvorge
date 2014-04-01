@@ -15,22 +15,101 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
 
-package OVF::Service::Security::SSH::Vars;
+package OVF::User::SSH::Vars;
 
 use strict;
 use warnings;
 
-use Storable;
-
 our %ssh;
 my %common;
 
-$common{'RHEL'} = {
-	'packages'    => [ 'openssh-client' ]
-};
+my $sshKeyName = 'id_rsa';
 
-$ssh{'SLES'} = Storable::dclone( $common{'RHEL'} );
-$ssh{'SLES'}{packages} = [ 'openssh-clients' ];
+$common{'RHEL'} = {
+	'directories' => {
+		'home' => {
+			path  => '.ssh',
+			save  => 0,
+			chmod => 700,
+			chown => 0,
+			chgrp => 0
+		}
+	},
+	'files' => {
+		'config' => {
+			path  => 'config',
+			save  => 0,
+			chmod => 600,
+			chown => 0,
+			chgrp => 0,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{Host *
+  StrictHostKeyChecking no
+  UserKnownHostsFile=/dev/null
+  IdentityFile <SSH_PRIVATE_KEY>
+  ForwardX11 yes}
+				}
+			}
+		},
+		'known_hosts' => {
+			path  => 'known_hosts',
+			save  => 0,
+			chmod => 644,
+			chown => 0,
+			chgrp => 0,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'authorized_keys' => {
+			path  => 'authorized_keys',
+			save  => 0,
+			chmod => 600,
+			chown => 0,
+			chgrp => 0,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'pubkey' => {
+			path  => qq{<SSH_USER>-$sshKeyName.pub},
+			save  => 0,
+			chmod => 644,
+			chown => 0,
+			chgrp => 0,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'privkey' => {
+			path  => qq{<SSH_USER>-$sshKeyName},
+			save  => 0,
+			chmod => 600,
+			chown => 0,
+			chgrp => 0,
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		}
+	},
+	'task' => {
+		'genkeypair' => [ qq{ssh-keygen -t rsa -b 2048 -N '' -f <SSH_BASE_PATH>/<SSH_USER>-$sshKeyName} ]
+	}
+};
 
 # SSH
 $ssh{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'};

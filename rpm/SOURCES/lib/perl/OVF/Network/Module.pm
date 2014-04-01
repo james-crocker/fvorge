@@ -240,7 +240,7 @@ sub create ( \% ) {
 					$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
 					$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
 					$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
-					$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search \n};
+					$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
 				}
 
 				# IPv6 config
@@ -252,10 +252,12 @@ sub create ( \% ) {
 						$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
 						$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
 						$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
-						$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search \n};
+						$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
 					}
 
 				}
+				
+				$ifTemplate{apply}{1}{content} .= qq{hwaddress ether $mac\n};				
 
 			}
 
@@ -283,8 +285,8 @@ sub create ( \% ) {
 				$ifSlaveTemplate{path} =~ s/<IF_LABEL>/$label/g;
 				$ifSlaveTemplate{apply}{1}{content} .= qq{auto $label\n};
 				$ifSlaveTemplate{apply}{1}{content} .= qq{iface $label inet manual\n};
-				$ifSlaveTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
-				$ifSlaveTemplate{apply}{1}{content} .= qq{\tbond-master $masterLabel\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{hwaddress ether $mac\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{bond-master $masterLabel\n};
 			} else {
 				$ifSlaveTemplate{path}              =~ s/<IF_LABEL>/$label/g;
 				$ifSlaveTemplate{path}              =~ s/<IF_MAC>/$mac/g;

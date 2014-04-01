@@ -92,7 +92,7 @@
     <ProductSection ovf:class="service" ovf:instance="sshd">
       <Info>Information about the installed software</Info>
       <Category>Services::Security</Category>
-      <Property ovf:key="security" ovf:type="string" ovf:userConfigurable="true" ovf:value="permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y">
+      <Property ovf:key="security" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y">
         <Label>SSH Daemon</Label>
       </Property>
     </ProductSection>

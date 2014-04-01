@@ -37,10 +37,10 @@ our $sysArch    = $SIOS::SysInfo::arch;
 our %sysCmds;
 our %sysVars;
 
-$sysVars{distrosRegex}       = q{RHEL|CentOS|ORAL|SLES|Ubuntu};
-$sysVars{archsRegex}         = q{x86_64|i686};
-$sysVars{rhelVersionsRegex}  = q{5\.9|6\.0|6\.1|6\.2|6\.3|6\.4};
-$sysVars{slesVersionsRegex}  = q{10\.4|11\.1|11\.2};
+$sysVars{distrosRegex}        = q{RHEL|CentOS|ORAL|SLES|Ubuntu};
+$sysVars{archsRegex}          = q{x86_64|i686};
+$sysVars{rhelVersionsRegex}   = q{5\.9|6\.0|6\.1|6\.2|6\.3|6\.4};
+$sysVars{slesVersionsRegex}   = q{10\.4|11\.1|11\.2};
 $sysVars{ubuntuVersionsRegex} = q{13\.10|14\.04};
 
 $sysVars{'fvorge'}{home}           = '/opt/fvorge';
@@ -130,7 +130,8 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::create'}{addCmd
 $sysCmds{'suse'}{$sysVersion}{$sysArch}{'OVF::Manage::Users::create'}{addCmd}      = 'useradd --home <HOME_DIR> --shell <SHELL> --gid <GID> --uid <UID> --password <PASSWD> --comment <COMMENT>';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Groups::create'}{addCmd} = 'groupadd --gid <GID>';
 
-$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::changePassword'}{passwdCmd}  = q{echo '<USER>:<PASSWD>' | chpasswd};
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::changePassword'}{passwdCmd}     = q{echo '<USER>:<PASSWD>' | chpasswd};
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::changePassword'}{crackCheckCmd} = '/usr/sbin/cracklib-check';
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Users::destroy'}{destroyCmd}  = 'userdel -f -r';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Manage::Groups::destroy'}{destroyCmd} = 'groupdel';

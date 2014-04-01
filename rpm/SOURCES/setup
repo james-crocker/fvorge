@@ -1,3 +1,7 @@
-mv /tmp/* /opt/fvorge/.
+mkdir /opt/fvorge
+mv /tmp/bin /tmp/etc /tmp/sbin /tmp/lib /opt/fvorge/.
 cd /opt/fvorge/lib/OVF
 ln -s ubuntu-min-ovf.xml ovf-defaults.xml
+mv /opt/fvorge/sbin/fvorge.pl /opt/fvorge/sbin/fvorge
+cp /opt/fvorge/etc/init.d/fvorge.sh /etc/init.d/fvorge
+update-rc.d fvorge defaults

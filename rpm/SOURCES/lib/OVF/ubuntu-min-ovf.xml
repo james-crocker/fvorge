@@ -38,13 +38,15 @@
 
          <Property oe:key="custom.storage" oe:value="priority=before action=/bin/true ;; priority=badtest action=/bin/true"/>
 
+         <Property oe:key="custom.users" oe:value="priority=before action=/bin/true ;; priority=badtest action=/bin/true"/>
+
          <Property oe:key="host" oe:value="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=201 instance=1"/>
 
          <Property oe:key="host.locale" oe:value="change=y lang=DE"/>
 
          <Property oe:key="host.updates" oe:value="enabled=y"/>
 
-         <Property oe:key="network" oe:value="hostname=everst domain=sc.steeleye.com"/>
+         <Property oe:key="network" oe:value="hostname=everest domain=sc.steeleye.com"/>
 
          <Property oe:key="network.gateway" oe:value="ipv4=172.17.107.254 ipv6=2001:5c0:110e:3368::254"/>
 
@@ -70,16 +72,18 @@
 
          <Property oe:key="service.security.firewall" oe:value="enabled=y"/>
          
-         <Property oe:key="service.security.user.deployed.admin" oe:value="sios"/>
+         <Property oe:key="user.deployed.admin" oe:value="sios"/>
          
-         <Property oe:key="service.security.user.deployed.admin.password" oe:value="frs123"/>
+         <Property oe:key="user.deployed.admin.password" oe:value="frs123_SE"/>
+                  
+         <Property oe:key="user.ssh" oe:value="uid=root gid=root home=/root genkeypair=y authorizedkeys=ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQDYZ4SIlv8tc8oKkq+UmRoMMlFzjU+kzXOWuAaQ7iStRyG6bQCr+j4E4Euj7DOKlGSYtrbFyYmMxxXFGJTXFENcQg/IqrYAS2UJ53v5aiGQ9QFo9PHcWzXWllRVPpxkhxy3jLCuygQO46gBOgXppbQYHS5YXZONlUBtooanjDcuYAm3KPhjnX1ooshr6CP1QZxeZLNdL0sohDDz1d7bQhuoBLDHfX6GgJSO7GAqolYWgS6iNsUrjCFd6hNMiVutcqkus9NNCtDaWMy8DdFFNSxt/UvWneDxrBBDFY29qoLzmbT19Dn5OBbU5hv81vBGITiabsyhKPfsjaLWQn2KInTH%20seed69x@colossus,ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQDMNPz4UzQlE1uxERICT1VvQC2LHg9ZVz3RsRBi4J4mOJz61xRNHCWIKcjC9KQp/3AnIvPN/c+f/L/S6PppbYA0l1t4Z9RNBMKnkkRN4SGP0JW+e7oHOwezoCZRsMFxpCDrupDhY7UPyeUjQTBDRj5vvLxaRNWFkOuxAvT9z55yLUgN6KbKSzEQEcHIEPQMqwsK30pdOSA2KSbL6sIx8GWNdZ8us8CJ2iZdgXdLgWMfK3ZlaUtFeF/aSvx5zPcsp0FjL3djVmyVdqOB3DTam9djNTvxsEQs4Q0gm4RBXX2JjDV/EnWddIoQBUtWvyreezH34//L5Y0wMhlUgLPVzBKL%20root@colossus ;; uid=sios gid=sios home=/home/sios genkeypair=n pubkey=ssh-rsa%20AAAAB3NzaC1yc2EAAAABIwAAAQEAwuUTqwQrZBUZB+mAm0vCe4A5HpndufYeOGj4XIdRCouKlQwXA9GXmRvlQ/dZ6pt5Imni/ceqPFfNx7z3U52Rk7/ZvsG8FY1J10iFk3mJenwl3kcCUhSkzbYVtk25h5bHOBD8PSWafAfv3aEiMgBf2xxLGMvWT2J6//X+Xo+Y1tK6T+hy+UVRBIXtWAIrO7BPRj76KIjyJAj1WrbL+apXlkeEjHMyk7ojgPoTu0+v7kpB1qmA3TaJNefnjKcO8AV1g8n5MQBiIbaJ3+otq84vS2FtMvyFihVamsjxl2uJVnn4TNgKniXczCc1cgEaTdV+CBl12hvcalFrfjkOPBc5iw%3D%3D%20root@cae-qa-anyhost privkey=-----BEGIN%20RSA%20PRIVATE%20KEY-----MIIEowIBAAKCAQEAwuUTqwQrZBUZB+mAm0vCe4A5HpndufYeOGj4XIdRCouKlQwXA9GXmRvlQ/dZ6pt5Imni/ceqPFfNx7z3U52Rk7/ZvsG8FY1J10iFk3mJenwl3kcCUhSkzbYVtk25h5bHOBD8PSWafAfv3aEiMgBf2xxLGMvWT2J6//X+Xo+Y1tK6T+hy+UVRBIXtWAIrO7BPRj76KIjyJAj1WrbL+apXlkeEjHMyk7ojgPoTu0+v7kpB1qmA3TaJNefnjKcO8AV1g8n5MQBiIbaJ3+otq84vS2FtMvyFihVamsjxl2uJVnn4TNgKniXczCc1cgEaTdV+CBl12hvcalFrfjkOPBc5iwIBIwKCAQAyHaX4xo7Ql7X6uGLmGsucGahJsol49iUHMO9oQA2GXmV2yJg0LpSyV6FanrC4q6LOVb4GvlBYqN0ku5AOL9T6G2PgmDetxT7flk473Wx+lPPLcVheP9KbTBQ2MT5WENQkXCOaseXlYSBsML+mdR/2g55INGpO7XAV7sxhdWHQ1qcABiuXjgXQARLpXwgq5ctiHXCauBZA8zBbO3T0Qvz2/8UvN57SDXGuvlxZvfYA38n5gor9j4CQyTRenDHerxlcIqlEchBE2igAOs1qulIExzBq8NI9qH7XoYfaZqFkvva7MscppvIfiAzMkV96NBOa8VaBL2XEblxglWb46QVLAoGBAOhxk52QBBDlJc4G3n6ASfz4d813FiAiDD5vSxoJCo1kVd/y+IZkHsCO4vbzi4WIZLWwNifWj4FGYjJtyxOYE1X1C2SnnTmEPk6eUiSdZovoAoNStYGWqkf/1yqvfZNMYRJpe3hlrZtmFB1xHNpXNLOgdMBOTfWgIihEVhkk/CErAoGBANalWUhUw5tLzblTzoz4IZCzxnbJint3LokW2c6sftX/nTP+TQmpZxqf3XzAGlFGDXqxd65JBzBnIel2CsegnoQL/uXUiyI8YLwkQZThIUf7dLvOnn0Douxw0u96JfQs+V9EQcSWfT55rK1XILA31kVF+ixAFZPquvhs80gyrVkhAoGBALNQTU2pnLyTg5BOcR/CDTDc7rRxzz1cGBLoI/4kO1chhBMpJh6Hv/OhbUIpl4REpXY3ejv9SiHl1rkwIFDxqIQjbzBkC5LFGh9kML0o91X8HzIbO4/aoJ3xP5X1F7rF5Hvq+Nk4fpxzUViKdVf6IVdehfNvmznTTYzHAJcN5xJFAoGBAI0NknFcRgb3TKz8jwwuB22393KhssYpv36oncJUGNXFO2tPVzI8Hy7A02CbfwI1WVCggdjuKUuxfK9cMvg2WYn5QRqwPixw0dq4vWHVxWnRINMwAb/d0XbNzHF8J5HUaVvcZbuzWZ4VcXk5QV3bjM5v0Ej26Zu3gi4496R5EtQrAoGBAKdN8R/dCAn2qSGPACwlaYvVXksnYGijfBvDWL8Lam4Yz2Vh8A1MW8jHh+4Jn/HFfr36c6yWT3ePTtxtgCSGOI/upXLSzT1Lo3ExxZKtpRoHUJGFoA+ouEisht5ZDfEvYfwfrbUPiL+7tt/kjBrCWo4ULJI8MnDpkCFLDKOU2JAY-----END%20RSA%20PRIVATE%20KEY-----"/>
 
          <Property oe:key="service.security.pam.ldap" oe:value="packages=y enabled=y server=ldap://ldap.sc.steeleye.com basedn=dc%3Dsteeleye,dc%3Dcom"/>
 
-         <Property oe:key="service.security.sshd" oe:value="permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y x11forwarding=n tcpforwarding=n password-auth=n usepam=y"/>
-         
-         <Property oe:key="service.security.ssh.user.config" oe:value="uid=root gid=root home=/root genkeypair=y authorizedkeys=ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQDYZ4SIlv8tc8oKkq+UmRoMMlFzjU+kzXOWuAaQ7iStRyG6bQCr+j4E4Euj7DOKlGSYtrbFyYmMxxXFGJTXFENcQg/IqrYAS2UJ53v5aiGQ9QFo9PHcWzXWllRVPpxkhxy3jLCuygQO46gBOgXppbQYHS5YXZONlUBtooanjDcuYAm3KPhjnX1ooshr6CP1QZxeZLNdL0sohDDz1d7bQhuoBLDHfX6GgJSO7GAqolYWgS6iNsUrjCFd6hNMiVutcqkus9NNCtDaWMy8DdFFNSxt/UvWneDxrBBDFY29qoLzmbT19Dn5OBbU5hv81vBGITiabsyhKPfsjaLWQn2KInTH%20seed69x@colossus,ssh-rsa%20AAAAB3NzaC1yc2EAAAADAQABAAABAQDMNPz4UzQlE1uxERICT1VvQC2LHg9ZVz3RsRBi4J4mOJz61xRNHCWIKcjC9KQp/3AnIvPN/c+f/L/S6PppbYA0l1t4Z9RNBMKnkkRN4SGP0JW+e7oHOwezoCZRsMFxpCDrupDhY7UPyeUjQTBDRj5vvLxaRNWFkOuxAvT9z55yLUgN6KbKSzEQEcHIEPQMqwsK30pdOSA2KSbL6sIx8GWNdZ8us8CJ2iZdgXdLgWMfK3ZlaUtFeF/aSvx5zPcsp0FjL3djVmyVdqOB3DTam9djNTvxsEQs4Q0gm4RBXX2JjDV/EnWddIoQBUtWvyreezH34//L5Y0wMhlUgLPVzBKL%20root@colossus ;; uid=sios gid=sios home=/home/sios genkeypair=n pubkey=ssh-rsa%20AAAAB3NzaC1yc2EAAAABIwAAAQEAwuUTqwQrZBUZB+mAm0vCe4A5HpndufYeOGj4XIdRCouKlQwXA9GXmRvlQ/dZ6pt5Imni/ceqPFfNx7z3U52Rk7/ZvsG8FY1J10iFk3mJenwl3kcCUhSkzbYVtk25h5bHOBD8PSWafAfv3aEiMgBf2xxLGMvWT2J6//X+Xo+Y1tK6T+hy+UVRBIXtWAIrO7BPRj76KIjyJAj1WrbL+apXlkeEjHMyk7ojgPoTu0+v7kpB1qmA3TaJNefnjKcO8AV1g8n5MQBiIbaJ3+otq84vS2FtMvyFihVamsjxl2uJVnn4TNgKniXczCc1cgEaTdV+CBl12hvcalFrfjkOPBc5iw%3D%3D%20root@cae-qa-anyhost privkey=-----BEGIN%20RSA%20PRIVATE%20KEY-----MIIEowIBAAKCAQEAwuUTqwQrZBUZB+mAm0vCe4A5HpndufYeOGj4XIdRCouKlQwXA9GXmRvlQ/dZ6pt5Imni/ceqPFfNx7z3U52Rk7/ZvsG8FY1J10iFk3mJenwl3kcCUhSkzbYVtk25h5bHOBD8PSWafAfv3aEiMgBf2xxLGMvWT2J6//X+Xo+Y1tK6T+hy+UVRBIXtWAIrO7BPRj76KIjyJAj1WrbL+apXlkeEjHMyk7ojgPoTu0+v7kpB1qmA3TaJNefnjKcO8AV1g8n5MQBiIbaJ3+otq84vS2FtMvyFihVamsjxl2uJVnn4TNgKniXczCc1cgEaTdV+CBl12hvcalFrfjkOPBc5iwIBIwKCAQAyHaX4xo7Ql7X6uGLmGsucGahJsol49iUHMO9oQA2GXmV2yJg0LpSyV6FanrC4q6LOVb4GvlBYqN0ku5AOL9T6G2PgmDetxT7flk473Wx+lPPLcVheP9KbTBQ2MT5WENQkXCOaseXlYSBsML+mdR/2g55INGpO7XAV7sxhdWHQ1qcABiuXjgXQARLpXwgq5ctiHXCauBZA8zBbO3T0Qvz2/8UvN57SDXGuvlxZvfYA38n5gor9j4CQyTRenDHerxlcIqlEchBE2igAOs1qulIExzBq8NI9qH7XoYfaZqFkvva7MscppvIfiAzMkV96NBOa8VaBL2XEblxglWb46QVLAoGBAOhxk52QBBDlJc4G3n6ASfz4d813FiAiDD5vSxoJCo1kVd/y+IZkHsCO4vbzi4WIZLWwNifWj4FGYjJtyxOYE1X1C2SnnTmEPk6eUiSdZovoAoNStYGWqkf/1yqvfZNMYRJpe3hlrZtmFB1xHNpXNLOgdMBOTfWgIihEVhkk/CErAoGBANalWUhUw5tLzblTzoz4IZCzxnbJint3LokW2c6sftX/nTP+TQmpZxqf3XzAGlFGDXqxd65JBzBnIel2CsegnoQL/uXUiyI8YLwkQZThIUf7dLvOnn0Douxw0u96JfQs+V9EQcSWfT55rK1XILA31kVF+ixAFZPquvhs80gyrVkhAoGBALNQTU2pnLyTg5BOcR/CDTDc7rRxzz1cGBLoI/4kO1chhBMpJh6Hv/OhbUIpl4REpXY3ejv9SiHl1rkwIFDxqIQjbzBkC5LFGh9kML0o91X8HzIbO4/aoJ3xP5X1F7rF5Hvq+Nk4fpxzUViKdVf6IVdehfNvmznTTYzHAJcN5xJFAoGBAI0NknFcRgb3TKz8jwwuB22393KhssYpv36oncJUGNXFO2tPVzI8Hy7A02CbfwI1WVCggdjuKUuxfK9cMvg2WYn5QRqwPixw0dq4vWHVxWnRINMwAb/d0XbNzHF8J5HUaVvcZbuzWZ4VcXk5QV3bjM5v0Ej26Zu3gi4496R5EtQrAoGBAKdN8R/dCAn2qSGPACwlaYvVXksnYGijfBvDWL8Lam4Yz2Vh8A1MW8jHh+4Jn/HFfr36c6yWT3ePTtxtgCSGOI/upXLSzT1Lo3ExxZKtpRoHUJGFoA+ouEisht5ZDfEvYfwfrbUPiL+7tt/kjBrCWo4ULJI8MnDpkCFLDKOU2JAY-----END%20RSA%20PRIVATE%20KEY-----"/>
+         <Property oe:key="service.security.ssh" oe:value="packages=y"/>
 
+         <Property oe:key="service.security.sshd" oe:value="packages=y enabled=y permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y x11forwarding=n tcpforwarding=n password-auth=n usepam=y"/>
+                  
          <Property oe:key="service.time.ntp" oe:value="packages=y enabled=y servers=ntp1.sc.steeleye.com,0.pool.ntp.org"/>
 
    </PropertySection>
@@ -88,11 +92,11 @@
 
       <ve:Adapter ve:mac="52:54:00:0b:1b:08" ve:network="VM Network" ve:unitNumber="7"/>
 
-      <ve:Adapter ve:mac="52:54:00:b6:47:bf" ve:network="VM Network" ve:unitNumber="8"/>
+      <ve:Adapter ve:mac="52:54:00:30:d3:63" ve:network="VM Network" ve:unitNumber="8"/>
 
-      <ve:Adapter ve:mac="52:54:00:55:1c:42" ve:network="VM Network" ve:unitNumber="9"/>
+      <ve:Adapter ve:mac="52:54:00:b7:c0:e3" ve:network="VM Network" ve:unitNumber="9"/>
 
-      <ve:Adapter ve:mac="52:54:00:c8:a6:36" ve:network="VM Network" ve:unitNumber="10"/>
+      <ve:Adapter ve:mac="52:54:00:43:67:a3" ve:network="VM Network" ve:unitNumber="10"/>
 
    </ve:EthernetAdapterSection>
 

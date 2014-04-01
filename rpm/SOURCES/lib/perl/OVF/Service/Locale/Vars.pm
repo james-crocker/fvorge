@@ -95,6 +95,7 @@ export LANGUAGE="<LOCALE_LANG>"}
 	'task' => { 'yast-language' => [ q{yast2 --ncurses language set lang=<LOCALE_YAST_LANG>} ] }
 };
 
+#my $ubuntuLanguages = [ 'ar', 'bg', 'bs', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'eu', 'fa', 'fi', 'fr', 'ga', 'gl', 'he', 'hi', 'hr', 'hu', 'ia', 'is', 'it', 'ja', 'kk', 'km', 'ko', 'lt', 'lv', 'mr', 'nb', 'nds', 'nl', 'nn', 'pa', 'pl', 'pt', 'ro', 'ru', 'si', 'sk', 'sl', 'sr', 'sv', 'tg', 'th', 'tr', 'ug', 'uk', 'vi', 'wa', 'zh-hans', 'zh-hant' ];
 $common{'Ubuntu'} = {
     'packages' => {
         'DE' => [ 'language-pack-de', 'language-pack-de-base', 'manpages-de' ],

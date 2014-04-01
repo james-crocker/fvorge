@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
 
-package OVF::Service::Security::User::Deployed::Module;
+package OVF::User::Deployed::Module;
 
 use strict;
 use warnings;
 
-use lib '../../../../../../perl';
+use lib '../../../../perl';
 use OVF::Manage::Users;
 use OVF::State;
 use OVF::Vars::Common;
@@ -45,8 +45,8 @@ sub changePassword ( \% ) {
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
 
-	my $deployedAdmin = 'service.security.user.deployed.admin';
-	my $adminPassword = 'service.security.user.deployed.admin.password';
+	my $deployedAdmin = 'user.deployed.admin';
+	my $adminPassword = 'user.deployed.admin.password';
 
 	my $admin;
 	my $password;

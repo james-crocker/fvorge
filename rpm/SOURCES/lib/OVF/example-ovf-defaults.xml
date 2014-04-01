@@ -94,7 +94,7 @@
 
          <Property oe:key="service.security.selinux" oe:value="enabled=n"/>
 
-         <Property oe:key="service.security.sshd" oe:value="permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y"/>
+         <Property oe:key="service.security.sshd" oe:value="packages=y enabled=y permit-root=y gssapi-auth=n pubkey-auth=y rsa-auth=y"/>
          
          <Property oe:key="service.security.ssh.user.config" oe:value=""/>
 
