@@ -10,20 +10,20 @@
         <Label>Platform</Label>
       </Property>
       <Category>Networking</Category>
-      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true" ovf:value="hostname=cae-qa-base domain=sc.steeleye.com">
+      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true" ovf:value="hostname=fvorge domain=sios.com">
         <Label>Host</Label>
       </Property>      
     </ProductSection>
     <ProductSection ovf:class="network">
       <Info>Network</Info>
       <Category>Networking</Category>
-      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="precedence=ipv4 search=sc.steeleye.com,steeleye.com,sc6.steeleye.com nameservers=172.17.4.60,172.17.4.1,2001:5c0:110e:3300::1">
+      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="precedence=ipv4 search=sios.com nameservers=3.3.3.3,1::1">
         <Label>Resolv</Label>
       </Property>
-      <Property ovf:key="gateway" ovf:type="string" ovf:userConfigurable="true" ovf:value="ipv4=172.17.107.254 ipv6=2001:5c0:110e:3368::254">
+      <Property ovf:key="gateway" ovf:type="string" ovf:userConfigurable="true" ovf:value="ipv4=1.1.1.1 ipv6=1::1">
         <Label>Gateway</Label>
       </Property>
-      <Property ovf:key="if" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=1 label=se0 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5c0:110e:3368::69:3c ipv6-prefix=64 ;; if=2 label=se1 bootproto=dhcp ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0">
+      <Property ovf:key="if" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=1 label=se0 ipv4=2.2.2.2 ipv4-prefix=22 ipv6=1::1 ipv6-prefix=64 ;; if=2 label=se1 bootproto=dhcp ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0">
         <Label>Interfaces</Label>
       </Property>
       <Property ovf:key="alias" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=2 label=se1:1 ipv4=10.2.0.60 ipv4-prefix=24">

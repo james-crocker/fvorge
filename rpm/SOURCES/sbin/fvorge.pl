@@ -810,7 +810,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
         ^ Require that sios.product be defined and valid 
 
 	Setup-Args [sios.setup-args]: (-no-c already set, --product is set from se.product) *REQUIRED if sios.setup=y
-		-u jcrocker -v 8.1.2 --arks dmmp nfs sdr --postedits /opt/fvorge/lib/sps/default/interfacelist
+		-u auser -v 8.1.2 --arks dmmp nfs sdr --postedits /opt/fvorge/lib/sps/default/interfacelist
 
 	Erase-Args [sios.erase-args]: (called if se.product.setup is false|no, -no-c already set)
 		<empty>        

@@ -141,7 +141,7 @@
     <ProductSection ovf:class="service" ovf:instance="nfs">
       <Info>Information about the installed software</Info>
       <Category>Services::App</Category>
-      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n version=4 storage-device=/dev/mapper/mapthap1 data-directory=/srv/fvorge-nfs fs-type=ext3 clear-storage=n virtualip=cae-qa-r113.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n version=4 storage-device=/dev/mapper/mapthap1 data-directory=/srv/fvorge-nfs fs-type=ext3 clear-storage=n virtualip=113.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>Network File System [NFS]</Label>
       </Property>
     </ProductSection>
@@ -155,7 +155,7 @@
     <ProductSection ovf:class="service" ovf:instance="samba">
       <Info>Information about the installed software</Info>
       <Category>Services::App</Category>
-      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n confpath=/etc/samba/fvorge-samba-a.conf lockpath=/var/run/samba/fvorge-locks-a logpath=/var/log/fvorge-samba-a pidpath=/var/run/samba/fvorge-pid-a sharepath=/srv/fvorge-samba-share-a netbiosname=FVORGE-SAMBA-A workgroup=FVORGE-QA sharename=fvorge-share-a storage-device=/dev/mapper/mpathdp1 clear-storage=y virtual-ip=cae-qa-r116.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n confpath=/etc/samba/fvorge-samba-a.conf lockpath=/var/run/samba/fvorge-locks-a logpath=/var/log/fvorge-samba-a pidpath=/var/run/samba/fvorge-pid-a sharepath=/srv/fvorge-samba-share-a netbiosname=FVORGE-SAMBA-A workgroup=FVORGE-QA sharename=fvorge-share-a storage-device=/dev/mapper/mpathdp1 clear-storage=y virtual-ip=116.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>SAMBA</Label>
       </Property>
     </ProductSection>
@@ -176,7 +176,7 @@
     <ProductSection ovf:class="service" ovf:instance="mysql">
       <Info>Information about the installed software</Info>
       <Category>Services::Database</Category>
-      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-mysql port=3306 storage-device=/dev/mapper/mpathbp1 fs-type=ext3 virtualip=cae-qa-r114.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-mysql port=3306 storage-device=/dev/mapper/mpathbp1 fs-type=ext3 virtualip=114.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>MySQL</Label>
       </Property>
     </ProductSection>
@@ -190,14 +190,14 @@
     <ProductSection ovf:class="service" ovf:instance="postgresql">
       <Info>Information about the installed software</Info>
       <Category>Services::Database</Category>
-      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-pgsql port=5432 storage-device=/dev/mapper/mpathcp1 clear-storage=y initdb=y virtualip=cae-qa-r115.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-pgsql port=5432 storage-device=/dev/mapper/mpathcp1 clear-storage=y initdb=y virtualip=115.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>PostgreSQL</Label>
       </Property>
     </ProductSection>
     <ProductSection ovf:class="service" ovf:instance="sapdb">
       <Info>Information about the installed software</Info>
       <Category>Services::Database</Category>
-      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n virtaulip=cae-qa-r117.sc.sios.com virtualip-prefix=22 virtaulip-if=se1">
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n virtaulip=117.sc.sios.com virtualip-prefix=22 virtaulip-if=se1">
         <Label>SAPDB</Label>
       </Property>
     </ProductSection>

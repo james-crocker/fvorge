@@ -10,20 +10,20 @@
         <Label>Platform</Label>
       </Property>
       <Category>Networking</Category>
-      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true" ovf:value="hostname=cae-qa-base domain=sc.steeleye.com">
+      <Property ovf:key="network" ovf:type="string" ovf:userConfigurable="true" ovf:value="hostname=fvorge domain=sios.com">
         <Label>Host</Label>
       </Property>      
     </ProductSection>
     <ProductSection ovf:class="network">
       <Info>Information about the installed software</Info>
       <Category>Networking</Category>
-      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="precedence=ipv4  search=sc.steeleye.com,steeleye.com,sc6.steeleye.com nameservers=172.17.4.60,172.17.4.1,2001:5c0:110e:3300::1">
+      <Property ovf:key="resolv" ovf:type="string" ovf:userConfigurable="true" ovf:value="precedence=ipv4  search=sios.com nameservers=3.3.3.3,1::1">
         <Label>Resolv</Label>
       </Property>
-      <Property ovf:key="gateway" ovf:type="string" ovf:userConfigurable="true" ovf:value="ipv4=172.17.107.254 ipv6=2001:5c0:110e:3368::254">
+      <Property ovf:key="gateway" ovf:type="string" ovf:userConfigurable="true" ovf:value="ipv4=1.1.1.1. ipv6=1::1">
         <Label>Gateway</Label>
       </Property>
-      <Property ovf:key="if" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=1 label=se0 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5c0:110e:3368::69:3c ipv6-prefix=64 ;; if=2 label=se1 ipv4=10.1.0.60 ipv4-prefix=24 ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0">
+      <Property ovf:key="if" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=1 label=se0 ipv4=1.1.1.1. ipv4-prefix=22 ipv6=1::1 ipv6-prefix=64 ;; if=2 label=se1 ipv4=10.1.0.60 ipv4-prefix=24 ;; if=3 label=eth2 master-label=bond0 ;; if=4 label=eth3 master-label=bond0">
         <Label>Interfaces</Label>
       </Property>
       <Property ovf:key="alias" ovf:type="string" ovf:userConfigurable="true" ovf:value="if=2 label=se1:1 ipv4=10.2.0.60 ipv4-prefix=24">
@@ -67,7 +67,7 @@
     <ProductSection ovf:class="service" ovf:instance="syslog">
       <Info>Information about the installed software</Info>
       <Category>Services::Report</Category>
-      <Property ovf:key="report" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=y server=syslogs.sc.sios.com">
+      <Property ovf:key="report" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=y server=syslogs.sios.com">
         <Label>SYSLOG</Label>
       </Property>
     </ProductSection>
@@ -81,7 +81,7 @@
     <ProductSection ovf:class="service" ovf:instance="ntp">
       <Info>Information about the installed software</Info>
       <Category>Services::Time</Category>
-      <Property ovf:key="time" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y servers=ntp1.sc.sios.com">
+      <Property ovf:key="time" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y servers=ntp1.sios.com">
         <Label>Network Time [NTP]</Label>
       </Property>
     </ProductSection>
@@ -102,7 +102,7 @@
     <ProductSection ovf:class="service" ovf:instance="nfs">
       <Info>Information about the installed software</Info>
       <Category>Services::App</Category>
-      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n version=4 storage-device=/dev/mapper/mapthap1 data-directory=/srv/fvorge-nfs fs-type=ext3 clear-storage=n virtualip=cae-qa-r113.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n version=4 storage-device=/dev/mapper/mapthap1 data-directory=/srv/fvorge-nfs fs-type=ext3 clear-storage=n virtualip=r113.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>Network File System [NFS]</Label>
       </Property>
     </ProductSection>
@@ -116,7 +116,7 @@
     <ProductSection ovf:class="service" ovf:instance="samba">
       <Info>Information about the installed software</Info>
       <Category>Services::App</Category>
-      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n confpath=/etc/samba/fvorge-samba-a.conf lockpath=/var/run/samba/fvorge-locks-a logpath=/var/log/fvorge-samba-a pidpath=/var/run/samba/fvorge-pid-a sharepath=/srv/fvorge-samba-share-a netbiosname=FVORGE-SAMBA-A workgroup=FVORGE-QA sharename=fvorge-share-a storage-device=/dev/mapper/mpathdp1 clear-storage=y virtual-ip=cae-qa-r116.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="app" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n confpath=/etc/samba/fvorge-samba-a.conf lockpath=/var/run/samba/fvorge-locks-a logpath=/var/log/fvorge-samba-a pidpath=/var/run/samba/fvorge-pid-a sharepath=/srv/fvorge-samba-share-a netbiosname=FVORGE-SAMBA-A workgroup=FVORGE-QA sharename=fvorge-share-a storage-device=/dev/mapper/mpathdp1 clear-storage=y virtual-ip=r116.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>SAMBA</Label>
       </Property>
     </ProductSection>
@@ -137,7 +137,7 @@
     <ProductSection ovf:class="service" ovf:instance="mysql">
       <Info>Information about the installed software</Info>
       <Category>Services::Database</Category>
-      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-mysql port=3306 storage-device=/dev/mapper/mpathbp1 fs-type=ext3 virtualip=cae-qa-r114.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-mysql port=3306 storage-device=/dev/mapper/mpathbp1 fs-type=ext3 virtualip=r114.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>MySQL</Label>
       </Property>
     </ProductSection>
@@ -151,14 +151,14 @@
     <ProductSection ovf:class="service" ovf:instance="postgresql">
       <Info>Information about the installed software</Info>
       <Category>Services::Database</Category>
-      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-pgsql port=5432 storage-device=/dev/mapper/mpathcp1 clear-storage=y initdb=y virtualip=cae-qa-r115.sc.sios.com virtualip-prefix=22 virtualip-if=se1">
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=n enabled=n databafvorge-directory=/srv/fvorge-pgsql port=5432 storage-device=/dev/mapper/mpathcp1 clear-storage=y initdb=y virtualip=r115.sios.com virtualip-prefix=22 virtualip-if=se1">
         <Label>PostgreSQL</Label>
       </Property>
     </ProductSection>
     <ProductSection ovf:class="service" ovf:instance="sapdb">
       <Info>Information about the installed software</Info>
       <Category>Services::Database</Category>
-      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n virtaulip=cae-qa-r117.sc.sios.com virtualip-prefix=22 virtaulip-if=se1">
+      <Property ovf:key="database" ovf:type="string" ovf:userConfigurable="true" ovf:value="enabled=n virtaulip=r117.sios.com virtualip-prefix=22 virtaulip-if=se1">
         <Label>SAPDB</Label>
       </Property>
     </ProductSection>
@@ -179,7 +179,7 @@
     <ProductSection ovf:class="service" ovf:instance="iscsi">
       <Info>Information about the installed software</Info>
       <Category>Services::Storage</Category>
-      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y portal=iscsi.sc.sios.com initiatorname=iqn.2013-01.com.sios.qa.init:00-00-00-00-000-## targetiqn=iqn.2013-01.com.sios.qa.target:00-00-00-00-000">
+      <Property ovf:key="storage" ovf:type="string" ovf:userConfigurable="true" ovf:value="packages=y enabled=y portal=iscsi.sios.com initiatorname=iqn.2013-01.com.sios.qa.init:00-00-00-00-000-## targetiqn=iqn.2013-01.com.sios.qa.target:00-00-00-00-000">
         <Label>ISCSI</Label>
       </Property>
     </ProductSection>

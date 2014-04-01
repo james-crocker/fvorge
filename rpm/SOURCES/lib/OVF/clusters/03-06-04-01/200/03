@@ -8,7 +8,7 @@
 --prop:"network.bond"="label=bond0 if-slaves=3,4 ipv4=10.3.0.62 ipv4-prefix=24" \
 --prop:"host.locale"="change=n lang=EN|DE|KR|JP" \
 --prop:"host.updates"="enabled=n" \
---prop:"sios.setup-args"="-u jcrocker -v 8.2.0 --arks dmmp nfs dr" \
+--prop:"sios.setup-args"="-u auser -v 8.2.0 --arks dmmp nfs dr" \
 --prop:"sios.erase-args"="" \
 --prop:"sios.automation"="setup=y" \
 --prop:"service.security.apparmor"="enabled=n syslog-emerg=y" \

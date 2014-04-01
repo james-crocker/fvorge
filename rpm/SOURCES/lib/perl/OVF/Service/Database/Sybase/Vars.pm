@@ -53,7 +53,7 @@ $common{'RHEL'} = {
 		'dev'    => q(<SAPDB_VIRTUAL_IP_DEV>)
 	},
 	'task' => {
-		'getmedia'    => [ q{cd /home/sp-sybase; scp jcrocker@hancock:/filepile/software/Sybase/ase157_linuxx86-64.tgz . } ],
+		'getmedia'    => [ q{cd /home/sp-sybase; scp auser@host:/filepile/software/Sybase/ase157_linuxx86-64.tgz . } ],
 		'untar'       => [ q{mkdir -p /home/sp-sybase/ase157_linuxx86-64;cd /home/sp-sybase/ase157_linuxx86-64; tar xvfzp ../ase157_linuxx86-64.tgz} ],
 		'chown'       => [ q{chown -R sp-sybase.sp-sybase /home/sp-sybase/ase157_linuxx86-64} ],
 		'install'     => [ q{su - sp-sybase -c "/home/sp-sybase/ase157_linuxx86-64/setup.bin -f /home/sp-sybase/ase157_linux86-64-silent-install -i silent -DAGREE_TO_SYBASE_LICENSE=true -DRUN_SILENT=true"} ],
