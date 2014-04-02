@@ -164,7 +164,7 @@ HOSTNAME=<HOSTNAME>.<DOMAIN>}
 $common{'SLES'} = {
 	'remove' => {
 		'prefix' => 'ifcfg-',
-		'path'   => '/etc/sysconfig/network'
+		'path'   => '/etc/sysconfig/network/interfaces.d'
 	},
 	'defaults' => {
 		'bond-options' => 'mode=balance-rr miimon=100',
