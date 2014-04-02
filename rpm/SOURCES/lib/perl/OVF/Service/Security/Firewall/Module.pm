@@ -46,6 +46,13 @@ sub isRunning ( \% ) {
 		} else {
 			$fwState = 0;
 		}
+	} elsif ( $distro eq 'Ubuntu' ) {
+		my $fw = qx{/usr/sbin/ufw status};
+		if ( $fw =~ /^\s*Status:\s+active\s*$/ ) {
+			$fwState = 1;
+		} else {
+			$fwState = 0;
+		}
 	} else {
 		my $fw4 = qx{/etc/init.d/iptables status};
 		my $fw6 = qx{/etc/init.d/ip6tables status};
@@ -71,19 +78,19 @@ sub apply ( \% ) {
 	my $distro = $options{ovf}{current}{'host.distribution'};
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
-	
+
 	my $property = 'service.security.firewall.enabled';
-	
+
 	if ( !defined $OVF::Service::Security::Firewall::Vars::firewall{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
-	
+
 	if ( !defined $options{ovf}{current}{$property} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $property undefined} );
 		return;
 	}
-	
+
 	if ( !OVF::State::ovfIsChanged( $property, %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO changes to apply; Current $property same as Previous property} );
 	} else {
@@ -93,7 +100,7 @@ sub apply ( \% ) {
 		} else {
 			disable( \%options );
 		}
-	} 
+	}
 
 }
 
@@ -109,7 +116,8 @@ sub enable ( \% ) {
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
 
-	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SYSTEM AT INITIAL STATE ...} ) and return ) if ( !exists $options{ovf}{previous} );
+    # Ubuntu server is not enabled in the default installation
+	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SYSTEM AT INITIAL STATE ...} ) and return ) if ( !exists $options{ovf}{previous} and $distro ne 'Ubuntu');
 
 	my %firewallVars = %{ $OVF::Service::Security::Firewall::Vars::firewall{$distro}{$major}{$minor}{$arch} };
 
@@ -132,6 +140,9 @@ sub disable ( \% ) {
 	my $distro = $options{ovf}{current}{'host.distribution'};
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
+
+    # Ubuntu server is not enabled in the default installation
+    ( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: SYSTEM AT INITIAL STATE ...} ) and return ) if ( !exists $options{ovf}{previous} and $distro eq 'Ubuntu');
 
 	my %firewallVars = %{ $OVF::Service::Security::Firewall::Vars::firewall{$distro}{$major}{$minor}{$arch} };
 

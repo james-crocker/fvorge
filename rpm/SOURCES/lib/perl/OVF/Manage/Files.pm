@@ -124,7 +124,7 @@ sub create ( \%\% ) {
 					}
 				}
 
-				# DELETE ALL occurances with content
+				# DELETE ALL occurances
 				if ( defined $ovfObject{$fileName}{apply}{$applyNum}{delete} ) {
 
 					foreach my $key ( sort keys %{ $ovfObject{$fileName}{apply}{$applyNum}{delete} } ) {
@@ -133,16 +133,30 @@ sub create ( \%\% ) {
 
 						if ( defined $regex ) {
 							Sys::Syslog::syslog( 'info', qq{$action INITIATING: DELETE REGEX ($regex) in $path ...} );
-							my $contentLines = 0;
-							my $success      = 0;
-							for ( @content ) {
-								if ( /$regex/ ) {
-									splice @content, $contentLines, 1;
-									Sys::Syslog::syslog( 'info', qq{$action SUCCEED: DELETE REGEX at LINE ($contentLines)} );
-									$success = 1;
+
+							my $success       = 0;
+							my $done          = 0;
+							my $lastMatchLine = 0;
+
+							do {
+
+								my $currentLine = -1;
+								for ( @content ) {
+									$currentLine++;
+									if ( $lastMatchLine and $currentLine < $lastMatchLine ) {
+										next;
+									} elsif ( /$regex/ ) {
+										splice @content, $currentLine, 1;
+										$lastMatchLine = $currentLine;
+										Sys::Syslog::syslog( 'info', qq{$action SUCCEED: DELETE MATCHING REGEX at LINE ($currentLine)} );
+										last;
+									}
 								}
-								$contentLines++;
-							}
+
+								$done = 1 if ( $currentLine == $#content );
+
+							} while ( !$done );
+
 							Sys::Syslog::syslog( 'warning', qq{$action WARNING: NO LINES MATCHED} ) if ( !$success );
 							Sys::Syslog::syslog( 'info', qq{$action COMPLETED: DELETE REGEX} );
 						} else {
@@ -160,8 +174,7 @@ sub create ( \%\% ) {
 						my $regex   = $ovfObject{$fileName}{apply}{$applyNum}{substitute}{$key}{regex};
 						my $content = $ovfObject{$fileName}{apply}{$applyNum}{substitute}{$key}{content};
 						my $unique  = $ovfObject{$fileName}{apply}{$applyNum}{substitute}{$key}{unique};
-
-						my $delOther = 0;
+						my $nomatch = $ovfObject{$fileName}{apply}{$applyNum}{substitute}{$key}{nomatch};
 
 						my $isUnique;
 						if ( $unique ) {
@@ -170,36 +183,72 @@ sub create ( \%\% ) {
 							$isUnique = 'No';
 						}
 
+						# Only head or tail, skip otherwise
+						if ( defined $nomatch and $nomatch !~ /^(head|tail)$/ ) {
+							undef $nomatch;
+						}
+
+						# Replaces all occurances and deletes other entries if is $isUnique
 						if ( defined $regex and defined $content ) {
 							Sys::Syslog::syslog( 'info', qq{$action INITIATING: SUBSTITUTE REGEX ($regex) UNIQUE ($isUnique) in $path ...} );
-							my $contentLines = 0;
-							my $success      = 0;
-							for ( @content ) {
-								if ( /$regex/ ) {
-									if ( $delOther ) {
-										splice @content, $contentLines, 1;
-										Sys::Syslog::syslog( 'info', qq{$action NON-UNIQUE: DELETED REGEX at LINE ($contentLines)} );
-									} else {
-										$content[ $contentLines ] = $content;
-										Sys::Syslog::syslog( 'info', qq{$action SUCCEED: SUBSTITUTE REGEX at LINE ($contentLines)} );
-										$success = 1;
+
+							my $success       = 0;
+							my $done          = 0;
+							my $lastMatchLine = 0;
+
+							do {
+
+								my $currentLine = -1;
+								for ( @content ) {
+
+									$currentLine++;
+									if ( $lastMatchLine and $currentLine < $lastMatchLine ) {
+										next;
+									} elsif ( /$regex/ ) {
+										if ( $success and $unique ) {
+											splice @content, $currentLine, 1;
+											$lastMatchLine = $currentLine;
+											Sys::Syslog::syslog( 'info', qq{$action NON-UNIQUE: DELETED MATCHING REGEX at LINE ($currentLine)} );
+											last;
+										} else {
+											$content[ $currentLine ] = $content;
+											$lastMatchLine = $content =~ tr/\n//;
+											$lastMatchLine += $currentLine - 1;
+											$success = 1;
+											Sys::Syslog::syslog( 'info', qq{$action SUCCEED: SUBSTITUTE MATCHING REGEX at LINE ($currentLine)} );
+										}
 									}
-									$delOther = 1 if ( $unique );
 								}
-								$contentLines++;
-							}
+
+								$done = 1 if ( $currentLine == $#content );
+
+							} while ( !$done );
+
 							Sys::Syslog::syslog( 'warning', qq{$action WARNING: NO LINES MATCHED} ) if ( !$success );
+
+							# If a nomatch directive defined then re-run the loop to tail or head the content.
+							if ( !$success and $nomatch ) {
+								Sys::Syslog::syslog( 'info', qq{$action REDO: $nomatch REQUESTED SINCE NO LINES MATCHED} );
+								$ovfObject{$fileName}{apply}{$applyNum}{$nomatch} = 1;
+								$ovfObject{$fileName}{apply}{$applyNum}{content} = $ovfObject{$fileName}{apply}{$applyNum}{substitute}{$key}{content};
+								delete $ovfObject{$fileName}{apply}{$applyNum}{substitute};
+								redo;
+							}
+
 							Sys::Syslog::syslog( 'info', qq{$action COMPLETED: SUBSTITUTE REGEX} );
+
 						} else {
+
 							Sys::Syslog::syslog( 'warning', qq{$action ::SKIP:: SUBSTITUTE REGEX AND/OR CONTENT NOT DEFINED} );
+
 						}
+
 					}
 
 				}
 
 				# Put content before a matched line of ALL occurances with content
 				if ( defined $ovfObject{$fileName}{apply}{$applyNum}{before} ) {
-
 					foreach my $key ( sort keys %{ $ovfObject{$fileName}{apply}{$applyNum}{before} } ) {
 
 						my $regex   = $ovfObject{$fileName}{apply}{$applyNum}{before}{$key}{regex};
@@ -207,23 +256,27 @@ sub create ( \%\% ) {
 
 						if ( defined $regex and defined $content ) {
 							Sys::Syslog::syslog( 'info', qq{$action INITIATING: BEFORE REGEX ($regex) in $path ...} );
-							my $contentLines = 0;
-							my $success      = 0;
-							my $matched      = 0;
-							for ( @content ) {
-								# Avoid endless before
-								if ( $matched ) {
-									$matched = 0;
-									next;
+							my $success       = 0;
+							my $done          = 0;
+							my $lastMatchLine = 0;
+
+							do {
+								my $currentLine = -1;
+								for ( @content ) {
+									$currentLine++;
+									if ( $lastMatchLine and $currentLine < $lastMatchLine ) {
+										next;
+									} elsif ( /$regex/ ) {
+										splice @content, $currentLine, 0, $content;
+										$lastMatchLine = $content =~ tr/\n//;
+										$lastMatchLine = 1 if ( !$lastMatchLine );
+										$lastMatchLine += $currentLine + 1;
+										$success = 1;
+										Sys::Syslog::syslog( 'info', qq{$action SUCCEED: BEFORE REGEX at LINE ($currentLine)} );
+									}
 								}
-								if ( /$regex/ ) {
-									splice @content, $contentLines, 0, $content;
-									Sys::Syslog::syslog( 'info', qq{$action SUCCEED: BEFORE REGEX at LINE ($contentLines)} );
-									$success = 1;
-									$matched = 1;
-								}
-								$contentLines++;
-							}
+								$done = 1 if ( $currentLine == $#content );
+							} while ( !$done );
 							Sys::Syslog::syslog( 'warning', qq{$action WARNING: NO LINES MATCHED} ) if ( !$success );
 							Sys::Syslog::syslog( 'info', qq{$action COMPLETED: BEFORE REGEX} );
 						} else {
@@ -243,16 +296,28 @@ sub create ( \%\% ) {
 
 						if ( defined $regex and defined $content ) {
 							Sys::Syslog::syslog( 'info', qq{$action INITIATING: AFTER REGEX ($regex) in $path ...} );
-							my $contentLines = 0;
-							my $success      = 0;
-							for ( @content ) {
-								if ( /$ovfObject{$fileName}{apply}{$applyNum}{after}{$key}{regex}/ ) {
-									splice @content, ( $contentLines + 1 ), 0, $content;
-									Sys::Syslog::syslog( 'info', qq{$action SUCCEED: AFTER REGEX at LINE ($contentLines)} );
-									$success = 1;
+
+							my $success       = 0;
+							my $done          = 0;
+							my $lastMatchLine = 0;
+							do {
+								my $currentLine = -1;
+								for ( @content ) {
+									$currentLine++;
+									if ( $lastMatchLine and $currentLine < $lastMatchLine ) {
+										next;
+									} elsif ( /$regex/ ) {
+										splice @content, ( $currentLine + 1 ), 0, $content;
+										$lastMatchLine = $content =~ tr/\n//;
+										$lastMatchLine = 1 if ( !$lastMatchLine );
+										$lastMatchLine += $currentLine + 1;
+										$success = 1;
+										Sys::Syslog::syslog( 'info', qq{$action SUCCEED: AFTER REGEX at LINE ($currentLine)} );
+
+									}
 								}
-								$contentLines++;
-							}
+								$done = 1 if ( $currentLine == $#content );
+							} while ( !$done );
 							Sys::Syslog::syslog( 'warning', qq{$action WARNING: NO LINES MATCHED} ) if ( !$success );
 							Sys::Syslog::syslog( 'info', qq{$action COMPLETED: AFTER REGEX} );
 						} else {
@@ -295,7 +360,7 @@ sub create ( \%\% ) {
 		}
 
 		Sys::Syslog::syslog( 'info', qq{$action FINISH: ($fileName)} );
-		
+
 	}
 
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );

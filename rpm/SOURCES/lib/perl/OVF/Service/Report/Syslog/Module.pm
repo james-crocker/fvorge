@@ -80,17 +80,45 @@ sub enable ( \% ) {
 	my $required        = [];
 	my $requiredEnabled = [ 'service.report.syslog.server' ];
 	return if ( OVF::State::checkRequired( $action, $required, 'service.report.syslog.enabled', $requiredEnabled, %options ) );
+	
+	my $server = $options{ovf}{current}{'service.report.syslog.server'};
+	
+	my $port = $options{ovf}{current}{'service.report.syslog.port'};
+	if ( !defined $port or $port !~ /^\d+$/ ) {
+		$port = $syslogVars{defaults}{port};
+	}
+	
+    my $protocol = $options{ovf}{current}{'service.report.syslog.protocol'};
+    if ( !defined $protocol or $protocol !~ /^(tcp|udp)$/ ) {
+        $protocol = $syslogVars{defaults}{protocol};
+    }
+    
+    my $facility = $options{ovf}{current}{'service.report.syslog.facility'};
+    if ( !defined $facility ) {
+        $facility = $syslogVars{defaults}{facility};
+    }
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
 	if ( $distro eq 'SLES' ) {
-		$syslogVars{files}{'syslogconf'}{apply}{1}{after}{1}{content} =~ s/<SYSLOG_SERVER>/$options{ovf}{current}{'service.report.syslog.server'}/;
+		$syslogVars{files}{'syslogconf'}{apply}{1}{after}{1}{content} =~ s/<SYSLOG_SERVER>/$server/;
+		$syslogVars{files}{'syslogconf'}{apply}{1}{after}{1}{content} =~ s/<SYSLOG_PORT>/$port/;
+		$syslogVars{files}{'syslogconf'}{apply}{1}{after}{1}{content} =~ s/<SYSLOG_PROTOCOL>/$protocol/;
 	} else {
-		$syslogVars{files}{'syslogconf'}{apply}{1}{content} =~ s/<SYSLOG_SERVER>/$options{ovf}{current}{'service.report.syslog.server'}/;
+		
+		my $atProtocol = '@'; # udp is @
+		if ( $protocol eq 'tcp') {
+			$atProtocol .= '@'; # tcp is @@
+		}
+		
+		$syslogVars{files}{'syslogconf'}{apply}{1}{content} =~ s/<SYSLOG_SERVER>/$server/;
+		$syslogVars{files}{'syslogconf'}{apply}{1}{content} =~ s/<SYSLOG_PORT>/$port/;
+		$syslogVars{files}{'syslogconf'}{apply}{1}{content} =~ s/<SYSLOG_PROTOCOL>/$atProtocol/;
+		$syslogVars{files}{'syslogconf'}{apply}{1}{content} =~ s/<SYSLOG_FACILITY>/$facility/;
 	}
 
 	OVF::Manage::Files::create( %options, %{ $syslogVars{files} } );
-	#OVF::Manage::Tasks::run( %options, @{ $syslogVars{task}{restart} } );
+	OVF::Manage::Tasks::run( %options, @{ $syslogVars{task}{restart} } );
 
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 
@@ -115,7 +143,7 @@ sub disable ( \% ) {
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
 	OVF::Manage::Files::destroy( %options, %{ $syslogVars{files} } );
-	#OVF::Manage::Tasks::run( %options, @{ $syslogVars{task}{restart} } );
+	OVF::Manage::Tasks::run( %options, @{ $syslogVars{task}{restart} } );
 
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 

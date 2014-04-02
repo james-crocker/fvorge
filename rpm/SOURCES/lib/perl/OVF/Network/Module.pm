@@ -53,7 +53,7 @@ sub apply ( \% ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
-	
+
 	if ( OVF::State::ovfIsChanged( 'network.*', %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action ...} );
 		destroy( \%options );
@@ -73,10 +73,12 @@ sub create ( \% ) {
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
 
 	my $action = $thisSubName;
-	my $arch   = $options{ovf}{current}{'host.architecture'};
-	my $distro = $options{ovf}{current}{'host.distribution'};
-	my $major  = $options{ovf}{current}{'host.major'};
-	my $minor  = $options{ovf}{current}{'host.minor'};
+
+	my %currentOvf = %{ $options{ovf}{current} };
+	my $arch       = $currentOvf{'host.architecture'};
+	my $distro     = $currentOvf{'host.distribution'};
+	my $major      = $currentOvf{'host.major'};
+	my $minor      = $currentOvf{'host.minor'};
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
@@ -86,44 +88,64 @@ sub create ( \% ) {
 
 	my %generatedFiles;    # Collect created files for later creation
 
-	my %hostnameTemplate   = %{ Storable::dclone( $networkVars{files}{hostname} ) };
-	my %resolvTemplate     = %{ Storable::dclone( $networkVars{files}{resolv} ) };
-	my %persistentTemplate = %{ Storable::dclone( $networkVars{files}{persistent} ) } if ( defined $networkVars{files}{persistent} );
+	my %hostnameTemplate = %{ Storable::dclone( $networkVars{files}{hostname} ) };
+	my %resolvTemplate   = %{ Storable::dclone( $networkVars{files}{resolv} ) } if ( defined $networkVars{files}{resolv} );
 
-	my $required = [ 'network.resolv.search', 'network.resolv.nameservers', 'network.gateway.ipv4', 'network.hostname', 'network.domain' ];
+	my $required        = [ 'network.if' ];
 	my $requiredEnabled = [];
 	return if ( OVF::State::checkRequired( $action, $required, '', $requiredEnabled, %options ) );
 
-	my $resolvSearch = $options{ovf}{current}{'network.resolv.search'};
-	my $resolvNames  = $options{ovf}{current}{'network.resolv.nameservers'};
-	my $ipv4Gateway  = $options{ovf}{current}{'network.gateway.ipv4'};
-	
-	my $ipv6Gateway  = '';
-	if ( $options{ovf}{current}{'network.gateway.ipv6'} ) {
-		$ipv6Gateway = $options{ovf}{current}{'network.gateway.ipv6'};
+	my $resolvSearch = $currentOvf{'network.resolv.search'} if ( defined $currentOvf{'network.resolv.search'} );
+
+	my $resolvNames = $currentOvf{'network.resolv.nameservers'} if ( defined $currentOvf{'network.resolv.nameservers'} );
+
+	my $ipv4Gateway = $currentOvf{'network.gateway.ipv4'} if ( defined $currentOvf{'network.gateway.ipv4'} );
+
+	my $ipv6Gateway = $currentOvf{'network.gateway.ipv6'} if ( defined $currentOvf{'network.gateway.ipv6'} );
+
+	my $hostName = $currentOvf{'network.hostname'} if ( defined $currentOvf{'network.hostname'} );
+
+	my $domainName = $currentOvf{'network.domain'} if ( defined $currentOvf{'network.domain'} );
+
+	# Markup the resolv files (Ubuntu will have search and nameservers in the interface file configs)
+	my $search = join( ' ', split( /,/, $resolvSearch ) ) if ( defined $resolvSearch );
+	my @nameservers = split( /,/, $resolvNames ) if ( defined $resolvNames );
+
+	if ( %resolvTemplate and $distro ne 'Ubuntu' ) {
+
+		$resolvTemplate{apply}{1}{content} .= q{domain } . $domainName . qq{\n};
+		$resolvTemplate{apply}{1}{content} .= qq{search $search\n};
+		foreach my $nameserver ( @nameservers ) {
+			$resolvTemplate{apply}{1}{content} .= qq{nameserver $nameserver\n};
+		}
+
+		$generatedFiles{resolv} = \%resolvTemplate;
+
 	}
-	
-	my $hostname   = $options{ovf}{current}{'network.hostname'};
-	my $domainName = $options{ovf}{current}{'network.domain'};
 
-	# Markup the resolv and hostname files
-	my $search = join( ' ', split( /,/, $resolvSearch ) );
-	my @nameservers = split( /,/, $resolvNames );
+	if ( $distro eq 'Ubuntu' ) {
+		my $resolvPrecedence = 'ipv6';
+		if ( defined $currentOvf{'network.resolv.precedence'} and $currentOvf{'network.resolv.precedence'} eq 'ipv4' ) {
+			$resolvPrecedence = $currentOvf{'network.resolv.precedence'};
+			my %gaiPrecedence = %{ Storable::dclone( $networkVars{files}{'gai-precedence'} ) } if ( defined $networkVars{files}{'gai-precedence'} );
 
-	$resolvTemplate{apply}{1}{content} .= q{domain } . $domainName . qq{\n};
-	$resolvTemplate{apply}{1}{content} .= qq{search $search\n};
-	foreach my $nameserver ( @nameservers ) {
-		$resolvTemplate{apply}{1}{content} .= qq{nameserver $nameserver\n};
+			if ( %gaiPrecedence and $resolvPrecedence eq 'ipv4' ) {
+				$generatedFiles{'gai-precedence'} = \%gaiPrecedence;
+			}
+
+		}
 	}
 
-	$hostnameTemplate{apply}{1}{content} =~ s/<HOSTNAME>/$hostname/g;
-	$hostnameTemplate{apply}{1}{content} =~ s/<DOMAIN>/$domainName/g;
-
-	$generatedFiles{resolv}   = \%resolvTemplate;
-	$generatedFiles{hostname} = \%hostnameTemplate;
-
-	# Reset persistent content and replace with generated
-	$persistentTemplate{apply}{1}{content} = '' if ( %persistentTemplate );
+	# Markup the hostname
+	if ( $hostName ) {
+		$hostnameTemplate{apply}{1}{content} =~ s/<HOSTNAME>/$hostName/g;
+		if ( $domainName ) {
+			$hostnameTemplate{apply}{1}{content} =~ s/<DOMAIN>/.$domainName/g;
+		} else {
+			$hostnameTemplate{apply}{1}{content} =~ s/<DOMAIN>//g;
+		}
+		$generatedFiles{hostname} = \%hostnameTemplate;
+	}
 
 	if ( $distro eq 'SLES' ) {
 
@@ -136,9 +158,17 @@ sub create ( \% ) {
 		$generatedFiles{routes} = \%routesTemplate;
 	}
 
-	my %netIf = %{ $options{ovf}{current}{'network.if'} };
+	my $gatewaySetIpv6 = 0;
+	my $gatewaySetIpv4 = 0;
+
+	my %persistentUdev;
+	if ( defined $networkVars{files}{'persistent'} ) {
+		%persistentUdev = %{ Storable::dclone( $networkVars{files}{'persistent'} ) };
+		$persistentUdev{apply}{1}{content} = '';
+	}
 
 	# Process the 'native' interfaces then aliases then bonded
+	my %netIf = %{ $currentOvf{'network.if'} };
 	foreach my $ifNum ( sort keys %netIf ) {
 
 		# Matching the 'VM MAC' with the defined interfaces. Order independent for the network.if
@@ -152,41 +182,46 @@ sub create ( \% ) {
 		my $label = $netIf{$ifNum}{label};
 		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Interface ($if) Missing label } ) and next ) if ( !$label );
 
-		my $persistentContentTemplate = $networkVars{files}{persistent}{apply}{1}{content} if ( defined $networkVars{files}{persistent} );
+		my $persistentUdevTemplate = $networkVars{files}{persistent}{apply}{1}{content} if ( defined $networkVars{files}{persistent}{apply}{1}{content} );
 
-		my $onboot =$networkVars{defaults}{onboot};
+		my $onboot = $networkVars{defaults}{onboot};
 		if ( $netIf{$ifNum}{onboot} ) {
 			$onboot = $netIf{$ifNum}{onboot};
 		}
-		
-		my $bootproto =$networkVars{defaults}{bootproto};
-		if ( $netIf{$ifNum}{bootproto} ) {
-			$bootproto = $netIf{$ifNum}{bootproto};
-		}
-		
+
 		# 'Native' interfaces
 		if ( !$netIf{$ifNum}{'master-label'} ) {
 
 			my %ifTemplate = %{ Storable::dclone( $networkVars{files}{if} ) };
 
-			my $ipv4       = $networkVars{defaults}{'ipv4'};
-			my $ipv6       = $networkVars{defaults}{'ipv6'};
-			my $ipv4Prefix = $networkVars{defaults}{'ipv4-prefix'};
-			my $ipv6Prefix = $networkVars{defaults}{'ipv6-prefix'};
+			my $ipv4          = $networkVars{defaults}{'ipv4'};
+			my $ipv6          = $networkVars{defaults}{'ipv6'};
+			my $ipv4Prefix    = $networkVars{defaults}{'ipv4-prefix'};
+			my $ipv6Prefix    = $networkVars{defaults}{'ipv6-prefix'};
+			my $ipv4Bootproto = $networkVars{defaults}{'ipv4-bootproto'};
+			my $ipv6Bootproto = $networkVars{defaults}{'ipv6-bootproto'};
 
-			if ( $netIf{$ifNum}{ipv4} ) {
+			if ( defined $netIf{$ifNum}{'ipv4-bootproto'} and $netIf{$ifNum}{'ipv4-bootproto'} =~ /^(static|dhcp)$/ios ) {
+				$ipv4Bootproto = lc( $netIf{$ifNum}{'ipv4-bootproto'} );
+			}
+
+			if ( defined $netIf{$ifNum}{'ipv6-bootproto'} and $netIf{$ifNum}{'ipv6-bootproto'} =~ /^(static|dhcp|auto)$/ios ) {
+				$ipv6Bootproto = lc( $netIf{$ifNum}{'ipv6-bootproto'} );
+			}
+
+			if ( defined $netIf{$ifNum}{ipv4} ) {
 				$ipv4 = $netIf{$ifNum}{ipv4};
 			}
 
-			if ( $netIf{$ifNum}{ipv6} ) {
+			if ( defined $netIf{$ifNum}{ipv6} ) {
 				$ipv6 = $netIf{$ifNum}{ipv6};
 			}
 
-			if ( $netIf{$ifNum}{'ipv4-prefix'} ) {
+			if ( defined $netIf{$ifNum}{'ipv4-prefix'} ) {
 				$ipv4Prefix = $netIf{$ifNum}{'ipv4-prefix'};
 			}
 
-			if ( $netIf{$ifNum}{'ipv6-prefix'} ) {
+			if ( defined $netIf{$ifNum}{'ipv6-prefix'} ) {
 				$ipv6Prefix = $netIf{$ifNum}{'ipv6-prefix'};
 			}
 
@@ -195,7 +230,7 @@ sub create ( \% ) {
 			$ifTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
 			$ifTemplate{apply}{1}{content} =~ s/<IF_MAC>/$mac/g;
 			$ifTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
-			$ifTemplate{apply}{1}{content} =~ s/<IF_BOOTPROTO>/$bootproto/g;
+			$ifTemplate{apply}{1}{content} =~ s/<IF_BOOTPROTO>/$ipv4Bootproto/g;
 			$ifTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
 			$ifTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
 			$ifTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
@@ -204,11 +239,56 @@ sub create ( \% ) {
 			$ifTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
 			$ifTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
 
-			if ( $persistentContentTemplate ) {
-				$persistentContentTemplate =~ s/<IF_MAC>/$mac/g;
-				$persistentContentTemplate =~ s/<IF_LABEL>/$label/g;
+			if ( defined $persistentUdev{apply} and defined $persistentUdevTemplate ) {
+				$persistentUdevTemplate =~ s/<IF_MAC>/$mac/g;
+				$persistentUdevTemplate =~ s/<IF_LABEL>/$label/g;
 
-				$persistentTemplate{apply}{1}{content} .= $persistentContentTemplate . "\n";
+				$persistentUdev{apply}{1}{content} .= $persistentUdevTemplate . "\n";
+			}
+
+			if ( $distro eq 'Ubuntu' ) {
+				$ifTemplate{path} =~ s/<IF_LABEL>/$label/g;
+
+				my $macSet = 0;
+
+				# IPv4 config
+				$ifTemplate{apply}{1}{content} .= qq{auto $label\n};
+
+				if ( $ipv4Bootproto ne 'disable' ) {
+					$ifTemplate{apply}{1}{content} .= qq{iface $label inet $ipv4Bootproto\n};
+
+					if ( !$macSet ) {
+						$ifTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
+						$macSet = 1;
+					}
+
+					if ( $ipv4Bootproto eq 'static' and $ipv4 and $ipv4Prefix ) {
+						$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
+						if ( !$gatewaySetIpv4 ) {
+							$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$gatewaySetIpv4 = 1;
+						}
+					}
+				}
+
+				# IPv6 config
+				if ( $ipv6Bootproto ne 'disable' ) {
+					$ifTemplate{apply}{1}{content} .= qq{iface $label inet6 $ipv6Bootproto\n};
+					$ifTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n} if ( !$macSet );
+
+					if ( ( $ipv6Bootproto eq 'static' ) and $ipv6 and $ipv6Prefix ) {
+						$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
+						if ( !$gatewaySetIpv6 ) {
+							$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$gatewaySetIpv6 = 1;
+						}
+					}
+				}
+
 			}
 
 			$generatedFiles{"if-$if"} = \%ifTemplate;
@@ -220,10 +300,13 @@ sub create ( \% ) {
 
 			my $masterLabel = $netIf{$ifNum}{'master-label'};
 
-			my %netBond = %{ $options{ovf}{current}{'network.bond'} };
-			my $halt    = 1;
+			( Sys::Syslog::syslog( 'err', qq{::SKIP:: network.bond not defined for slave ($ifNum) master $masterLabel} ) and next ) if ( !defined $currentOvf{'network.bond'} );
+
+			my %netBond = %{ $currentOvf{'network.bond'} };
+
+			my $halt = 1;
 			foreach my $ifNum ( sort keys %netBond ) {
-				if ( $netBond{$ifNum}{'label'} eq $masterLabel ) {
+				if ( defined $netBond{$ifNum}{'label'} and $netBond{$ifNum}{'label'} eq $masterLabel ) {
 					$halt = 0;
 					last;
 				}
@@ -231,193 +314,308 @@ sub create ( \% ) {
 
 			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Slave ($ifNum) label doesn't match any declared BOND interfaces} ) and next ) if ( $halt );
 
-			$ifSlaveTemplate{path}              =~ s/<IF_LABEL>/$label/g;
-			$ifSlaveTemplate{path}              =~ s/<IF_MAC>/$mac/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MAC>/$mac/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
-			$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MASTER_LABEL>/$masterLabel/g;
+			if ( $distro eq 'Ubuntu' ) {
+				$ifSlaveTemplate{path} =~ s/<IF_LABEL>/$label/g;
+				$ifSlaveTemplate{apply}{1}{content} .= qq{auto $label\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{iface $label inet manual\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{iface $label inet6 manual\n};
+				$ifSlaveTemplate{apply}{1}{content} .= qq{bond-master $masterLabel\n};
+			} else {
+				$ifSlaveTemplate{path}              =~ s/<IF_LABEL>/$label/g;
+				$ifSlaveTemplate{path}              =~ s/<IF_MAC>/$mac/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MAC>/$mac/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
+				$ifSlaveTemplate{apply}{1}{content} =~ s/<IF_MASTER_LABEL>/$masterLabel/g;
+			}
 
-			if ( $persistentContentTemplate ) {
+			if ( defined $persistentUdev{apply} and defined $persistentUdevTemplate ) {
 
-				$persistentContentTemplate =~ s/<IF_MAC>/$mac/g;
-				$persistentContentTemplate =~ s/<IF_LABEL>/$label/g;
+				$persistentUdevTemplate =~ s/<IF_MAC>/$mac/g;
+				$persistentUdevTemplate =~ s/<IF_LABEL>/$label/g;
 
-				$persistentTemplate{apply}{1}{content} .= $persistentContentTemplate . "\n";
+				$persistentUdev{apply}{1}{content} .= $persistentUdevTemplate . "\n";
 			}
 
 			$generatedFiles{"ifSlave-$label"} = \%ifSlaveTemplate;
 
 		}
+
+		$generatedFiles{persistent} = \%persistentUdev if ( %persistentUdev );
+
 	}
 
-	$generatedFiles{persistent} = \%persistentTemplate if ( %persistentTemplate );
+	if ( $currentOvf{'network.alias'} ) {
+		my %netAlias = %{ $currentOvf{'network.alias'} };
 
-	my %netAlias = %{ $options{ovf}{current}{'network.alias'} };
+		# Alias definitions
+		foreach my $ifNum ( sort keys %netAlias ) {
 
-	# Alias definitions
-	foreach my $ifNum ( sort keys %netAlias ) {
+			my %ifAliasTemplate;
+			my %slesAliasTemplate;
 
-		my %ifAliasTemplate;
-		my %slesAliasTemplate;
-
-		if ( $distro eq 'SLES' ) {
-			%slesAliasTemplate = %{ Storable::dclone( $networkVars{templates}{ifAlias} ) };
-		} else {
-			%ifAliasTemplate = %{ Storable::dclone( $networkVars{files}{ifAlias} ) };
-		}
-
-		my $ifForAlias = $netAlias{$ifNum}{if};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Alias ($ifForAlias) No matching 'physical' interface } ) and next ) if ( !$options{ovf}{current}{'network.if'}{$ifForAlias} );
-		my $label = $netAlias{$ifNum}{label};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Alias ($ifForAlias) Missing label } ) and next ) if ( !$label );
-
-		# SLES 10 uses mac for labeling interface files
-		my $mac;
-		if ( $distro eq 'SLES' ) {
-			$mac = $netIf{$ifForAlias}{mac};
-			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Alias ($ifForAlias) No matching VM Interface MAC address } ) and next ) if ( !$mac );
-		}
-
-		my $onparent = $networkVars{defaults}{'onparent'};
-		if ( $netAlias{$ifNum}{onparent} ) {
-			$onparent = $netAlias{$ifNum}{onparent};
-		}
-
-		my $ipv4       = $networkVars{defaults}{'ipv4'};
-		my $ipv6       = $networkVars{defaults}{'ipv6'};
-		my $ipv4Prefix = $networkVars{defaults}{'ipv4-prefix'};
-		my $ipv6Prefix = $networkVars{defaults}{'ipv6-prefix'};
-
-		if ( $netAlias{$ifNum}{ipv4} ) {
-			$ipv4 = $netAlias{$ifNum}{ipv4};
-		}
-		if ( $netAlias{$ifNum}{ipv6} ) {
-			$ipv6 = $netAlias{$ifNum}{ipv6};
-		}
-		if ( $netAlias{$ifNum}{'ipv4-prefix'} ) {
-			$ipv4Prefix = $netAlias{$ifNum}{'ipv4-prefix'};
-		}
-		if ( $netAlias{$ifNum}{'ipv6-prefix'} ) {
-			$ipv6Prefix = $netAlias{$ifNum}{'ipv6-prefix'};
-		}
-
-		# SLES appends to the parent interface
-		if ( $distro eq 'SLES' ) {
-
-			$slesAliasTemplate{content} =~ s/<IF_LABEL>/$label/g;
-			if ( $ipv6 ) {
-				$slesAliasTemplate{content} =~ s/<IF_IP>/$ipv6/g;
-				$slesAliasTemplate{content} =~ s/<IF_IP_PREFIX>/$ipv6Prefix/g;
+			if ( $distro eq 'SLES' ) {
+				%slesAliasTemplate = %{ Storable::dclone( $networkVars{templates}{ifAlias} ) };
 			} else {
-				$slesAliasTemplate{content} =~ s/<IF_IP>/$ipv4/g;
-				$slesAliasTemplate{content} =~ s/<IF_IP_PREFIX>/$ipv4Prefix/g;
+				%ifAliasTemplate = %{ Storable::dclone( $networkVars{files}{ifAlias} ) };
 			}
 
-			# Concat to the 'native' interface the alias was defined
-			$generatedFiles{"if-$ifForAlias"}{apply}{1}{content} .= $slesAliasTemplate{content};
+			my $ifForAlias = $netAlias{$ifNum}{if};
+			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Alias ($ifForAlias) No matching 'physical' interface } ) and next ) if ( !$currentOvf{'network.if'}{$ifForAlias} );
+			my $label = $netAlias{$ifNum}{label};
+			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Alias ($ifForAlias) Missing label } ) and next ) if ( !$label );
 
-		} else {
+			# SLES 10 uses mac for labeling interface files
+			my $mac;
+			if ( $distro eq 'SLES' ) {
+				$mac = $netIf{$ifForAlias}{mac};
+				( Sys::Syslog::syslog( 'err', qq{::SKIP:: Alias ($ifForAlias) No matching VM Interface MAC address } ) and next ) if ( !$mac );
+			}
 
-			$ifAliasTemplate{path}              =~ s/<IF_LABEL>/$label/g;
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_ONPARENT>/$onparent/g;
+			my $onparent = $networkVars{defaults}{'onparent'};
+			if ( $netAlias{$ifNum}{onparent} ) {
+				$onparent = $netAlias{$ifNum}{onparent};
+			}
 
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
+			my $ipv4          = $networkVars{defaults}{'ipv4'};
+			my $ipv6          = $networkVars{defaults}{'ipv6'};
+			my $ipv4Prefix    = $networkVars{defaults}{'ipv4-prefix'};
+			my $ipv6Prefix    = $networkVars{defaults}{'ipv6-prefix'};
+			my $ipv4Bootproto = $networkVars{defaults}{'ipv4-bootproto'};
+			my $ipv6Bootproto = $networkVars{defaults}{'ipv6-bootproto'};
 
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
-			$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
+			if ( defined $netAlias{$ifNum}{'ipv4-bootproto'} and $netAlias{$ifNum}{'ipv4-bootproto'} =~ /^(static|dhcp)$/ios ) {
+				$ipv4Bootproto = lc( $netAlias{$ifNum}{'ipv4-bootproto'} );
+			}
 
-			$generatedFiles{"ifAlias-$label"} = \%ifAliasTemplate;
+			if ( defined $netAlias{$ifNum}{'ipv6-bootproto'} and $netAlias{$ifNum}{'ipv6-bootproto'} =~ /^(static|dhcp|auto)$/ios ) {
+				$ipv6Bootproto = lc( $netAlias{$ifNum}{'ipv6-bootproto'} );
+			}
+
+			if ( defined $netAlias{$ifNum}{ipv4} ) {
+				$ipv4 = $netAlias{$ifNum}{ipv4};
+			}
+			if ( defined $netAlias{$ifNum}{ipv6} ) {
+				$ipv6 = $netAlias{$ifNum}{ipv6};
+			}
+			if ( defined $netAlias{$ifNum}{'ipv4-prefix'} ) {
+				$ipv4Prefix = $netAlias{$ifNum}{'ipv4-prefix'};
+			}
+			if ( defined $netAlias{$ifNum}{'ipv6-prefix'} ) {
+				$ipv6Prefix = $netAlias{$ifNum}{'ipv6-prefix'};
+			}
+
+			# SLES appends to the parent interface
+			if ( $distro eq 'SLES' ) {
+
+				$slesAliasTemplate{content} =~ s/<IF_LABEL>/$label/g;
+				if ( $ipv6 ) {
+					$slesAliasTemplate{content} =~ s/<IF_IP>/$ipv6/g;
+					$slesAliasTemplate{content} =~ s/<IF_IP_PREFIX>/$ipv6Prefix/g;
+				} else {
+					$slesAliasTemplate{content} =~ s/<IF_IP>/$ipv4/g;
+					$slesAliasTemplate{content} =~ s/<IF_IP_PREFIX>/$ipv4Prefix/g;
+				}
+
+				# Concat to the 'native' interface the alias was defined
+				$generatedFiles{"if-$ifForAlias"}{apply}{1}{content} .= $slesAliasTemplate{content};
+
+			} elsif ( $distro eq 'Ubuntu' ) {
+
+				$ifAliasTemplate{path} =~ s/<IF_LABEL>/$label/g;
+				$ifAliasTemplate{apply}{1}{content} .= qq{auto $label\n};
+
+				if ( $ipv4Bootproto ne 'disable' ) {
+					$ifAliasTemplate{apply}{1}{content} .= qq{iface $label inet $ipv4Bootproto\n};
+					if ( $ipv4Bootproto eq 'static' and $ipv4 and $ipv4Prefix ) {
+						$ifAliasTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
+					}
+				}
+
+				if ( $ipv6Bootproto ne 'disable' ) {
+
+					$ifAliasTemplate{apply}{1}{content} .= qq{iface $label inet6 $ipv6Bootproto\n};
+					if ( $ipv6Bootproto eq 'static' and $ipv6 and $ipv6Prefix ) {
+
+						$ifAliasTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
+					}
+				}
+
+				$generatedFiles{"ifAlias-$label"} = \%ifAliasTemplate;
+
+			} else {
+
+				$ifAliasTemplate{path}              =~ s/<IF_LABEL>/$label/g;
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_ONPARENT>/$onparent/g;
+
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
+
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
+				$ifAliasTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
+
+				$generatedFiles{"ifAlias-$label"} = \%ifAliasTemplate;
+
+			}
 
 		}
-
 	}
 
-	# Bond definitions
-	my %netBond = %{ $options{ovf}{current}{'network.bond'} };
+	if ( $currentOvf{'network.bond'} ) {
 
-	foreach my $ifNum ( sort keys %netBond ) {
+		# Bond definitions
+		my %netBond = %{ $currentOvf{'network.bond'} };
 
-		my %ifBondTemplate = %{ Storable::dclone( $networkVars{files}{ifBond} ) };
+		foreach my $ifNum ( sort keys %netBond ) {
 
-		my $label = $netBond{$ifNum}{label};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Bond ($ifNum) Missing label } ) and next ) if ( !$label );
+			my %ifBondTemplate = %{ Storable::dclone( $networkVars{files}{ifBond} ) };
 
-		my %netIf  = %{ $options{ovf}{current}{'network.if'} };
-		my @slaves = split( /,/, $netBond{$ifNum}{'if-slaves'} );
-		my $halt   = scalar( @slaves );
-		foreach my $slave ( @slaves ) {
-			foreach my $ifNum ( sort keys %netIf ) {
-				if ( $netIf{$ifNum}{'if'} eq $slave ) {
-					$halt--;
+			my $label = $netBond{$ifNum}{label};
+			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Bond ($ifNum) Missing label} ) and next ) if ( !$label );
+			
+			my $slaves = $netBond{$ifNum}{'if-slaves'};
+            ( Sys::Syslog::syslog( 'err', qq{::SKIP:: Bond ($ifNum) Missing slaves} ) and next ) if ( !$slaves );
+
+			my @slaves = split( /,/, $netBond{$ifNum}{'if-slaves'} );
+			my $halt   = scalar( @slaves );
+			foreach my $slave ( @slaves ) {
+				( Sys::Syslog::syslog( 'err', qq{::SKIP:: Bond ($ifNum) if-slaves ($slave) not an integer} ) and next ) if ( $slave !~ /^\d+$/ );				
+				foreach my $ifNum ( sort keys %netIf ) {
+					if ( defined $netIf{$ifNum}{'if'} and $netIf{$ifNum}{'if'} eq $slave ) {
+						$halt--;
+					}
 				}
 			}
-		}
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Bond ($ifNum) Not all if-slaves have matching 'physical' interfaces} ) and next ) if ( $halt != 0 );
+			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Bond ($ifNum) Not all if-slaves have matching 'physical' interfaces} ) and next ) if ( $halt != 0 );
 
-		my $onboot = $networkVars{defaults}{'onboot'};
-		if ( $netBond{$ifNum}{onboot} ) {
-			$onboot = $netBond{$ifNum}{onboot};
-		}
-
-		my $bondOptions = $networkVars{defaults}{'bond-options'};
-		if ( $netBond{$ifNum}{opts} ) {
-			$bondOptions = $netBond{$ifNum}{opts};
-		}
-
-		my $ipv4       = $networkVars{defaults}{'ipv4'};
-		my $ipv6       = $networkVars{defaults}{'ipv6'};
-		my $ipv4Prefix = $networkVars{defaults}{'ipv4-prefix'};
-		my $ipv6Prefix = $networkVars{defaults}{'ipv6-prefix'};
-
-		if ( $netBond{$ifNum}{ipv4} ) {
-			$ipv4 = $netBond{$ifNum}{ipv4};
-		}
-		if ( $netBond{$ifNum}{ipv6} ) {
-			$ipv6 = $netBond{$ifNum}{ipv6};
-		}
-		if ( $netBond{$ifNum}{'ipv4-prefix'} ) {
-			$ipv4Prefix = $netBond{$ifNum}{'ipv4-prefix'};
-		}
-		if ( $netBond{$ifNum}{'ipv6-prefix'} ) {
-			$ipv6Prefix = $netBond{$ifNum}{'ipv6-prefix'};
-		}
-
-		$ifBondTemplate{path}              =~ s/<IF_LABEL>/$label/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
-
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_BOND_OPTIONS>/$bondOptions/g;
-
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
-
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
-		$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
-
-		if ( $distro eq 'SLES' ) {
-
-			# SYNTAX EXAMPLE: BONDING_SLAVE0='eth0'
-			my @bondSlaves;
-			my $bondCount = 1;
-			my @slaves = split( /,/, $netBond{$ifNum}{'if-slaves'} );
-			foreach my $slave ( @slaves ) {
-				push( @bondSlaves, qq{BONDING_SLAVE$bondCount='} . $netIf{$slave}{label} . q{'} );
-				$bondCount++;
+			my $onboot = $networkVars{defaults}{'onboot'};
+			if ( $netBond{$ifNum}{onboot} ) {
+				$onboot = $netBond{$ifNum}{onboot};
 			}
-			my $bondSlavesLines = join( "\n", @bondSlaves );
-			$ifBondTemplate{apply}{1}{content} =~ s/<BONDING_SLAVES>/$bondSlavesLines/;
+
+			my $bondOptions = $networkVars{defaults}{'bond-options'};
+			if ( $netBond{$ifNum}{opts} ) {
+				$bondOptions = $netBond{$ifNum}{opts};
+			}
+
+			my $ipv4          = $networkVars{defaults}{'ipv4'};
+			my $ipv6          = $networkVars{defaults}{'ipv6'};
+			my $ipv4Prefix    = $networkVars{defaults}{'ipv4-prefix'};
+			my $ipv6Prefix    = $networkVars{defaults}{'ipv6-prefix'};
+			my $ipv4Bootproto = $networkVars{defaults}{'ipv4-bootproto'};
+			my $ipv6Bootproto = $networkVars{defaults}{'ipv6-bootproto'};
+
+			if ( defined $netBond{$ifNum}{'ipv4-bootproto'} and $netBond{$ifNum}{'ipv4-bootproto'} =~ /^(static|dhcp)$/ios ) {
+				$ipv4Bootproto = lc( $netBond{$ifNum}{'ipv4-bootproto'} );
+			}
+
+			if ( defined $netBond{$ifNum}{'ipv6-bootproto'} and $netBond{$ifNum}{'ipv6-bootproto'} =~ /^(static|dhcp|auto)$/ios ) {
+				$ipv6Bootproto = lc( $netBond{$ifNum}{'ipv6-bootproto'} );
+			}
+
+			if ( defined $netBond{$ifNum}{ipv4} ) {
+				$ipv4 = $netBond{$ifNum}{ipv4};
+			}
+			if ( defined $netBond{$ifNum}{ipv6} ) {
+				$ipv6 = $netBond{$ifNum}{ipv6};
+			}
+			if ( defined $netBond{$ifNum}{'ipv4-prefix'} ) {
+				$ipv4Prefix = $netBond{$ifNum}{'ipv4-prefix'};
+			}
+			if ( defined $netBond{$ifNum}{'ipv6-prefix'} ) {
+				$ipv6Prefix = $netBond{$ifNum}{'ipv6-prefix'};
+			}
+
+			if ( $distro eq 'Ubuntu' ) {
+
+				$ifBondTemplate{path} =~ s/<IF_LABEL>/$label/g;
+				$ifBondTemplate{apply}{1}{content} .= qq{auto $label\n};
+
+				if ( $ipv4Bootproto ne 'disable' ) {
+					$ifBondTemplate{apply}{1}{content} .= qq{iface $label inet static\n};
+
+					if ( $ipv4Bootproto eq 'static' and $ipv4 and $ipv4Prefix ) {
+						$ifBondTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
+						if ( !$gatewaySetIpv4 ) {
+							$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$gatewaySetIpv4 = 1;
+						}
+					}
+				}
+
+				if ( $ipv6Bootproto ne 'disable' ) {
+					$ifBondTemplate{apply}{1}{content} .= qq{iface $label inet6 static\n};
+
+					if ( $ipv6Bootproto eq 'static' and $ipv6 and $ipv6Prefix ) {
+						$ifBondTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
+						if ( !$gatewaySetIpv6 ) {
+							$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$gatewaySetIpv6 = 1;
+						}
+					}
+				}
+
+				if ( $bondOptions ) {
+					my @options = split( /\s+/, $bondOptions );
+					foreach my $opt ( @options ) {
+						my ( $key, $value ) = split( /=/, $opt );
+						$ifBondTemplate{apply}{1}{content} .= qq{bond-$key $value\n};
+					}
+				}
+
+				my $bondedSlaves;
+				foreach my $slave ( @slaves ) {
+					$bondedSlaves .= $netIf{$slave}{label} . q{ };
+				}
+
+				$ifBondTemplate{apply}{1}{content} .= qq{bond-slaves $bondedSlaves};
+
+			} else {
+
+				$ifBondTemplate{path}              =~ s/<IF_LABEL>/$label/g;
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_LABEL>/$label/g;
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_ONBOOT>/$onboot/g;
+
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_BOND_OPTIONS>/$bondOptions/g;
+
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4>/$ipv4/g;
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_PREFIX>/$ipv4Prefix/g;
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV4_GATEWAY>/$ipv4Gateway/g;
+
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6>/$ipv6/g;
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_PREFIX>/$ipv6Prefix/g;
+				$ifBondTemplate{apply}{1}{content} =~ s/<IF_IPV6_GATEWAY>/$ipv6Gateway/g;
+
+			}
+
+			if ( $distro eq 'SLES' ) {
+
+				# SYNTAX EXAMPLE: BONDING_SLAVE0='eth0'
+				my @bondSlaves;
+				my $bondCount = 1;
+				foreach my $slave ( @slaves ) {
+					push( @bondSlaves, qq{BONDING_SLAVE$bondCount='} . $netIf{$slave}{label} . q{'} );
+					$bondCount++;
+				}
+				my $bondSlavesLines = join( "\n", @bondSlaves );
+				$ifBondTemplate{apply}{1}{content} =~ s/<BONDING_SLAVES>/$bondSlavesLines/;
+			}
+
+			$generatedFiles{"ifBond-$label"} = \%ifBondTemplate;
+
 		}
-
-		$generatedFiles{"ifBond-$label"} = \%ifBondTemplate;
-
 	}
+
+	# Ubuntu needs the default 'interfaces' file modified.
+	$generatedFiles{'interfaces'} = $networkVars{files}{interfaces} if ( $distro eq 'Ubuntu' );
 
 	OVF::Manage::Files::create( %options, %generatedFiles );
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );

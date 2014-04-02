@@ -45,7 +45,7 @@ my @previousOvfProperties;
 
 my $originalsPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{path};
 
-my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|custom\..+)$};
+my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|service\.security\.ssh\.user\.config|custom\..+)$};
 my $yesRegex          = 'y|yes|true|t|1';
 my $noRegex           = 'n|no|false|f|0';
 my $saneKeyRegex      = q{[a-z\-\_\.0-9]+};
@@ -165,7 +165,7 @@ sub normalizeTrueFalse ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|rsa-auth|gssapi-auth|pubkey-auth|permit-root|packages-32bit|add-sshd|syslog-emerg|onboot)$';
+	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|packages-32bit|add-sshd|syslog-emerg|booton|genkeypair)$';
 	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
 
 	if ( $item !~ /,/ ) {
@@ -199,8 +199,8 @@ sub normalizeYesNo ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '\.(onboot|onparent)$';
-	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
+	my $requiredYesNo = '^(onboot|onparent|permit-root|pubkey-auth|gssapi-auth|rsa-auth|x11forwarding|tcpforwarding|password-auth|usepam)$';
+	return $item if ( $key ne '' and $key !~ /$requiredYesNo/ );
 
 	if ( $item =~ /^($yesRegex)$/i ) {
 		return 'yes';
@@ -476,6 +476,7 @@ sub propertiesGetCurrent ( \% ) {
 	my $archsRegex        = $OVF::Vars::Common::sysVars{archsRegex};
 	my $rhelVersionsRegex = $OVF::Vars::Common::sysVars{rhelVersionsRegex};
 	my $slesVersionsRegex = $OVF::Vars::Common::sysVars{slesVersionsRegex};
+	my $ubuntuVersionsRegex = $OVF::Vars::Common::sysVars{ubuntuVersionsRegex};
 
 	my $distro   = $options->{ovf}{current}{'host.distribution'};
 	my $arch     = $options->{ovf}{current}{'host.architecture'};
@@ -491,10 +492,12 @@ sub propertiesGetCurrent ( \% ) {
 
 	my $compoundVersion = qq{$major.$minor};
 
-	if ( $distro ne 'SLES' ) {
-		( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $rhelVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($rhelVersionsRegex)$/ );
-	} else {
+    if ( $distro eq 'SLES' ) {
 		( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $slesVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($slesVersionsRegex)$/ );
+	} elsif ( $distro eq 'Ubuntu' ) {
+        ( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $ubuntuVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($ubuntuVersionsRegex)$/ );		
+	} else {
+		( Sys::Syslog::syslog( 'err', qq{$action Unsupported version ($compoundVersion) for distribution ($distro): Expecting host.major.host.minor matching $rhelVersionsRegex} ) and die ) if ( $compoundVersion !~ /^($rhelVersionsRegex)$/ );
 	}
 
 }

@@ -30,6 +30,7 @@ use Sys::Syslog;
 use OVF::State;
 use OVF::Custom::Module;
 use OVF::Network::Module;
+use OVF::Network::Packages;
 use OVF::Service::App::NFS::Module;
 use OVF::Service::App::NFS::Packages;
 use OVF::Service::App::Samba::Module;
@@ -53,7 +54,9 @@ use OVF::Service::Security::Firewall::Module;
 use OVF::Service::Security::PAM::LDAP::Module;
 use OVF::Service::Security::PAM::LDAP::Packages;
 use OVF::Service::Security::SELINUX::Module;
-use OVF::Service::Security::SSH::Apply;
+use OVF::Service::Security::SSH::Packages;
+use OVF::Service::Security::SSHD::Module;
+use OVF::Service::Security::SSHD::Packages;
 use OVF::Service::Storage::ISCSI::Module;
 use OVF::Service::Storage::ISCSI::Packages;
 use OVF::Service::Storage::Multipath::Module;
@@ -66,6 +69,10 @@ use OVF::SIOS::Automation::Module;
 use OVF::SIOS::Automation::Packages;
 use OVF::SIOS::Prerequisites::Packages;
 use OVF::SIOS::Product::Module;
+use OVF::User::Deployed::Module;
+use OVF::User::SSH::Module;
+
+
 
 use OVF::VApp;
 
@@ -104,8 +111,6 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 
 	OVF::Custom::Module::apply( $customGroup, 'before', %options );
 	OVF::Network::Module::apply( %options );
-	OVF::Service::Security::SSH::Apply::sshdConfig( %options );
-	OVF::Service::Security::SSH::Apply::createUserConfig( %options, '/root', 'root', 'root' );
 	OVF::Custom::Module::apply( $customGroup, 'after', %options );
 
 	OVF::State::propertiesSave( $group, %options );
@@ -140,8 +145,11 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	#OVF::Service::Database::SAPDB::Packages::apply( %options );
 	#OVF::Service::Database::Sybase::Packages::apply( %options );
 	OVF::Service::Graphic::XServer::Packages::apply( %options );
+	OVF::Network::Packages::apply( %options );
 	OVF::Service::Report::SNMP::Packages::apply( %options );
 	OVF::Service::Security::PAM::LDAP::Packages::apply( %options );
+	OVF::Service::Security::SSH::Packages::apply( %options );
+	OVF::Service::Security::SSHD::Packages::apply( %options );
 	OVF::Service::Storage::ISCSI::Packages::apply( %options );
 	OVF::Service::Storage::Multipath::Packages::apply( %options );
 	#OVF::Service::Storage::MD::Packages::apply( %options );
@@ -174,6 +182,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	OVF::Service::Security::SELINUX::Module::apply( %options );
 	OVF::Service::Security::Firewall::Module::apply( %options );
 	OVF::Service::Security::PAM::LDAP::Module::apply( %options );
+	OVF::Service::Security::SSHD::Module::apply( %options );
 	OVF::Service::Storage::ISCSI::Module::apply( %options );
 	OVF::Service::Storage::Multipath::Module::apply( %options );
 	#OVF::Service::Storage::MD::Module::apply( %options );
@@ -211,6 +220,25 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 
 } else {
 	Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: PREVIOUSLY APPLIED} );
+}
+
+$group = 'users';
+$customGroup = 'custom.'.$group;
+$action = "FVORGE $group";
+if ( !OVF::State::propertiesApplied( $group, %options ) ) {
+
+    Sys::Syslog::syslog( 'info', qq{$action APPLY ...} );
+
+    OVF::Custom::Module::apply( $customGroup, 'before', %options );
+    OVF::User::Deployed::Module::changePassword( %options );
+    OVF::User::SSH::Module::apply( %options );
+    OVF::Custom::Module::apply( $customGroup, 'after', %options );
+
+    OVF::State::propertiesSave( $group, %options );
+    Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
+
+} else {
+    Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: PREVIOUSLY APPLIED} );
 }
 
 $group = 'app-services';
@@ -310,8 +338,6 @@ The order of ovf processing is:
 Network
 	OVF::Custom::Module::apply( 'custom.network', 'before' )
 	OVF::Network::Module::apply
-	OVF::Service::Security::SSH::Apply::sshdConfig
-	OVF::Service::Security::SSH::Apply::createUserConfig( %options, '/root', 'root', 'root' );
 	OVF::Custom::Module::apply( 'custom.network', 'after' )
 	--reboot--
 Packages
@@ -328,8 +354,11 @@ Packages
 	#OVF::Service::Database::SAPDB::Packages::apply
 	#OVF::Service::Database::Sybase::Packages::apply
 	OVF::Service::Graphic::XServer::Packages::apply
+	OVF::Network::Packages::apply
 	OVF::Service::Report::SNMP::Packages::apply
 	OVF::Service::Security::PAM::LDAP::Packages::apply
+	OVF::Service::Security::SSH::Packages::apply
+    OVF::Service::Security::SSHD::Packages::apply
 	OVF::Service::Storage::ISCSI::Packages::apply
 	OVF::Service::Storage::Multipath::Packages::apply
 	#OVF::Service::Storage::MD::Packages::apply
@@ -347,6 +376,7 @@ Host-Services
 	OVF::Service::Security::SELINUX::Module::apply
 	OVF::Service::Security::Firewall::Module::apply
 	OVF::Service::Security::PAM::LDAP::Module::apply
+	OVF::Service::Security::SSHD::Module::apply
 	OVF::Service::Storage::ISCSI::Module::apply
 	OVF::Service::Storage::Multipath::Module::apply
 	#OVF::Service::Storage::MD::Module::apply
@@ -361,6 +391,12 @@ Storage
 	#OVF::Storage::MD::Module::apply
 	OVF::Custom::Module::apply( 'custom.storage', 'after' )
 	--reboot--
+Users
+    OVF::Custom::Module::apply( 'custom.users', 'before' );
+    OVF::User::Deployed::Module::changePassword
+    OVF::User::SSH::Module::apply
+    OVF::Custom::Module::apply( 'custom.users', 'after' );
+    --NO-reboot--
 App-Services
 	OVF::Custom::Module::apply( 'custom.app-services', 'before' )
 	OVF::Service::App::NFS::Module::apply
@@ -392,9 +428,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 =begin text
 -------------------------
 
-	SSH Keys, common authorized_keys and config settings will be setup for 'root' user.
-
-	Architecture [host]:
+	Architecture [host]: (ovf value; but userConfigurable=false)
 	    *architecture=x86_64|i686
         *distribution=RHEL|CentOS|ORAL|SLES
         *major=#
@@ -421,7 +455,9 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		EN english, DE german, KR korean, JP japanese (ALL are *.UTF-8)
                 
 	Updates [host.updates]: (may be empty)
-		enabled=n (DEFAULT is NO, currently only applicable to CentOS)
+		enabled=n (DEFAULT is NO, currently only applicable to CentOS and Ubuntu)
+		
+		On Ubuntu this enables unattended security updates.
         	
 
 =end text
@@ -443,17 +479,21 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	Resolv [network.resolv]: (required)
 		*search=sc.steeleye.com,sc6.steeleye.com,steeleye.com
 		*nameservers=172.17.4.1,172.17.4.60
+		precedence=ipv4 (Ubuntu ONLY. Set DNS lookup preference to favor ipv4. Default is ipv6)
 
-	'REAL' interfaces [network.if]: (may be empty, but not very usefull)
+	'REAL' interfaces [network.if]: (required)
 		IPv4 only, IPv6 only or BOTH 		
 		*if=1 (the order of 'physical' network interface adapters, generally 'top-down' in the VM guest host hardware properties)
 		*label=eth0 (arbitrary)
 		onboot=no (OPTIONAL RHEL ONLY, default is 'yes')
-        bootproto=static (OPTIONAL, default is 'static')
-		ipv4=172.17.105.60 (Default is '')
-		ipv4-prefix=22 (Default is '')
-		ipv6=2001:5C0:110E:3368::254 (Default is '')
-		ipv6-prefix=64 (Default is '')
+        +ipv4-bootproto=static (dhcp, static) if undefined, no ipv4 configured for the interface
+        +ipv6-bootproto=static (dhcp, auto, static) if undefined, no ipv6 configured for the interface
+		++ipv4=172.17.105.60 (Default is '')
+		++ipv4-prefix=22 (Default is '')
+		  ++ required if ipv4-bootproto=static
+		++ipv6=2001:5C0:110E:3368::254 (Default is '')
+		++ipv6-prefix=64 (Default is '')
+		  ++ required if ipv6-bootproto=static
 		
 		Interfaces that will be slaves to a BONDED interface:
 		*if=3
@@ -470,12 +510,16 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 			*if=1 (associated 'REAL' interface)
 			*label=eth0:1 (SLES should be label=# e.g. label=2)
 			onparent=no (OPTIONAL RHEL ONLY, default is 'yes')
-			ipv4=172.17.105.60 (Default is '')
-			ipv4-prefix=22 (Default is '')
-			ipv6=2001:5C0:110E:3368::254 (Default is '')
-			ipv6-prefix=64 (Default is '')
+			+ipv4-bootproto=static (dhcp, static) if undefined, no ipv4 configured for the interface
+            +ipv6-bootproto=static (dhcp, auto, static) if undefined, no ipv6 configured for the interface			
+			++ipv4=172.17.105.60 (Default is '')
+			++ipv4-prefix=22 (Default is '')
+			  ++ required if ipv4-bootproto=static			
+			+ipv6=2001:5C0:110E:3368::254 (Default is '')
+			+ipv6-prefix=64 (Default is '')
+			 ++ required if ipv6-bootproto=static			
 			
-			EXAMPLE: if=1 label=eth0:1 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5C0:110E:3368::254 ipv6-prefix=64 ;; if=2 label=eth1:1 ipv4=172.17.105.61 ipv4-prefix=22 ;; if=3 label=eth2:1 ipv6=2001:5C0:110E:3368::253 ipv6-prefix=64
+			EXAMPLE: if=1 label=eth0:1 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5C0:110E:3368::254 ipv6-prefix=64 ipv6-bootproto=static;; if=2 label=eth1:1 ipv4-bootproto=dhcp ;; if=3 label=eth2:1 ipv6-bootproto=auto
 		
 		SLES Systems: (Can only define one set of IPv4|IPv6 aliases, but you can have multiple labels)
 			*if=1 (associated 'REAL' interface)
@@ -496,18 +540,23 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		*if-slaves=3,4 (associated 'REAL' interfaces defined with master-label)
 		opts=mode%3Dbalance-rr%20miimon%3D100 (OPTIONAL, default is mode=RoundRobin, miimon 100)
 		onboot=yes|no (OPTIONAL RHEL ONLY, default is 'yes')
-		ipv4=172.17.105.60 (Default is '')
-		ipv4-prefix=22 (Default is 24)
-		ipv6=2001:5C0:110E:3368::254 (Default is '')
-		ipv6-prefix=64 (Default is 64)
+		+ipv4-bootproto=static (dhcp, static) if undefined, no ipv4 configured for the interface
+        +ipv6-bootproto=static (dhcp, auto, static) if undefined, no ipv6 configured for the interface
+		++ipv4=172.17.105.60 (Default is '')
+		++ipv4-prefix=22 (Default is 24)
+		  ++ required if ipv4-bootproto=static
+		++ipv6=2001:5C0:110E:3368::254 (Default is '')
+		++ipv6-prefix=64 (Default is 64)
+          ++ required if ipv6-bootproto=static		
 
 =end text
 =item B<Base Services>
 =begin text
 -------------------------
+
 	AppArmor [service.security.apparmor]: (may be empty) OS default is ENABLED
 		enabled=y
-        syslog-emerg=y (to enable fix of AppArmor syslog EMERG notices to console)
+        syslog-emerg=y (SLES enable fix of AppArmor syslog EMERG notices to console)
 
 	SELINUX [service.security.selinux]: (may be empty) OS default is ENABLED
 		enabled=n
@@ -519,14 +568,17 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	NTP [service.time.ntp]: (may be empty) OS default is NO Packages, DISABLED
 		packages=y   
 		enabled=y
-		+server=ntp1.sc.steeleye.com
+		+servers=ntp1.sc.steeleye.com
 		
 	PAM-LDAP [service.secuirty.pam.ldap]: (may be empty) OS default is NO Packages, DISABLED
 		packages=y
 		packages-32bit=y (Default is No)
 		enabled=n
-		+server=ldap.sc.steeleye.com
+		+server=ldap.sc.steeleye.com (Ubuntu: ldap://<server>, ldaps://<server>, ldapi://<domainSocketUrlEncoded>)
 		+basedn=dc%3Dsteeleye,dc%3Dcom
+		rootbindpw=<password>
+		rootbinddn=cn%3Dmanager,dc%3Dexample,dc%3Dnet
+		binddn=cn%3Dproxyuser,dc%3Dexample,dc%3Dnet		
 
 	SNMP [service.report.snmp]: (may be empty) OS default is NO Packages, DISABLED
 		packages=n
@@ -534,14 +586,28 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		+community=defCommunity%20sesnmp
 
 	SSHD [service.security.sshd]: (may be empty) OS default is original distro config settings for sshd_config
-		permit-root-login=y
+		permit-root=y
 		rsa-auth=y
 		gssapi-auth=n
 		pubkey-auth=y
-
+		x11forwarding=n
+		tcpforwarding=n
+		password-auth=y
+		usepam=y
+		packages=y
+		enabled=y		
+		
+    SSH Client [service.security.ssh]: (may be empty)
+        packages=y
+        
 	SYSLOG [service.report.syslog]: (syslog, rsyslog, syslog-ng) (may be empty) OS default is NO central syslog messaging
 		enabled=y
 		+server=syslogs.sc.steeleye.com
+		port=714 (Default 514)
+		protocol=udp (Default TCP)
+		faciltiy=local6.* (Default *.*)
+		
+		EXAMPLE: enabled=y server=syslogs.sc.steeleye.com port=514 protocol=tcp facility=local6.info
 
 	X-server [service.graphic.xserver]: (may be empty) OS default is NO Packages
 		packages=y
@@ -640,9 +706,28 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
         
 		EXAMPLE: action=create pv-device=/dev/sdb,/dev/sdc partitions=2 mount-path=/srv/fvorge-lva1,/srv/fvorge-lva2 fs-type=ext3,ext4 fstab=y,y fstab-options=[noatime],[noacl] ;; ...
 		
-	LVM [storage.lvm.options]: (may be empty) OS default is NO onboot
-		onboot=y (Primarily for SLES, RHEL appears to have VG available on reboot)
+	LVM [storage.lvm.options]: (may be empty) OS default is NO booton
+		booton=y (Primarily for SLES, RHEL appears to have VG available on reboot)
 		
+=end text
+=item B<Users>
+=begin text
+-------------------------
+    Depolyed Admin Password [user.deployed.admin.password]: (must be defined, if not the default deployed admin password will NOT be changed.)
+        Make sure to use a complex password. If not then at least disable SSH password authentication.                
+        
+    SSH [user.ssh]: (may be empty) If defined however; uid, gid, home and genkeypair must be defined
+        *uid=username
+        *gid=groupname
+        *home=user home path
+        *genkeypair=y (if no; privkey and pubkey must be defined AND service.security.ssh enabled=y,packages=y)
+        privkey=... (ignored if genkeypair=n)
+        pubkey=... (ignored if genkeypair=n)
+        authorizedkeys=authorized_key format seperate multiple with ',' (make sure to use %3D for = and %20 for spaces if either occur in your keys)
+        
+        EXAMPLE: uid=root gid=root home=/root genkeypair=y authorizedkeys=ssh-rsa%20 A...%3D%20usera@hosta,ssh-rsa%20A...H%20userb@hostb ;; uid=sios gid=sios home=/home/sios genkeypair=y
+
+
 =end text
 =item B<Services>
 =begin text
@@ -736,7 +821,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
         ^ Require that sios.product be defined and valid 
 
 	Setup-Args [sios.setup-args]: (-no-c already set, --product is set from se.product) *REQUIRED if sios.setup=y
-		-u jcrocker -v 8.1.2 --arks dmmp nfs sdr --postedits /opt/fvorge/lib/sps/default/interfacelist
+		-u auser -v 8.1.2 --arks dmmp nfs sdr --postedits /opt/fvorge/lib/sps/default/interfacelist
 
 	Erase-Args [sios.erase-args]: (called if se.product.setup is false|no, -no-c already set)
 		<empty>        

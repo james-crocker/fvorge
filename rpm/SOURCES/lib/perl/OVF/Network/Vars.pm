@@ -30,14 +30,15 @@ $common{'RHEL'} = {
 		'path'   => '/etc/sysconfig/network-scripts'
 	},
 	'defaults' => {
-		'bond-options' => 'mode=1 miimon=100',
-		'ipv4'         => '',
-		'ipv4-prefix'  => '',
-		'ipv6'         => '',
-		'ipv6-prefix'  => '',
-		'onboot'       => 'yes',
-		'onparent'     => 'yes',
-		'bootproto'    => 'static'
+		'bond-options'   => 'mode=1 miimon=100',
+		'ipv4'           => '',
+		'ipv4-prefix'    => '',
+		'ipv6'           => '',
+		'ipv6-prefix'    => '',
+		'onboot'         => 'yes',
+		'onparent'       => 'yes',
+		'ipv4-bootproto' => 'disable',
+		'ipv6-bootproto' => 'disable'
 	},
 	'files' => {
 		'if' => {
@@ -144,7 +145,7 @@ USERCTL=no}
 				1 => {
 					replace => 1,
 					content => q{NETWORKING=yes
-HOSTNAME=<HOSTNAME>.<DOMAIN>}
+HOSTNAME=<HOSTNAME><DOMAIN>}
 				}
 			}
 		},
@@ -164,17 +165,18 @@ HOSTNAME=<HOSTNAME>.<DOMAIN>}
 $common{'SLES'} = {
 	'remove' => {
 		'prefix' => 'ifcfg-',
-		'path'   => '/etc/sysconfig/network'
+		'path'   => '/etc/sysconfig/network/interfaces.d'
 	},
 	'defaults' => {
-		'bond-options' => 'mode=balance-rr miimon=100',
-		'ipv4'         => '',
-		'ipv4-prefix'  => '',
-		'ipv6'         => '',
-		'ipv6-prefix'  => '',
-		'onboot'       => 'yes',
-		'onparent'     => 'yes',
-		'bootproto'    => 'static'
+		'bond-options'   => 'mode=balance-rr miimon=100',
+		'ipv4'           => '',
+		'ipv4-prefix'    => '',
+		'ipv6'           => '',
+		'ipv6-prefix'    => '',
+		'onboot'         => 'yes',
+		'onparent'       => 'yes',
+		'ipv4-bootproto' => 'disable',
+		'ipv6-bootproto' => 'disable'
 	},
 	'templates' => {
 		'ifAlias' => {
@@ -246,7 +248,7 @@ USERCONTROL='no'}
 			apply => {
 				1 => {
 					replace => 1,
-					content => q{<HOSTNAME>.<DOMAIN>}
+					content => q{<HOSTNAME><DOMAIN>}
 				}
 			}
 		},
@@ -278,14 +280,15 @@ $common{'SLES'}{10} = {
 		'path'   => '/etc/sysconfig/network'
 	},
 	'defaults' => {
-		'bond-options' => 'mode=balance-rr miimon=100',
-		'ipv4'         => '',
-		'ipv4-prefix'  => '',
-		'ipv6'         => '',
-		'ipv6-prefix'  => '',
-		'onboot'       => 'yes',
-		'onparent'     => 'yes',
-		'bootproto'    => 'static'
+		'bond-options'   => 'mode=balance-rr miimon=100',
+		'ipv4'           => '',
+		'ipv4-prefix'    => '',
+		'ipv6'           => '',
+		'ipv6-prefix'    => '',
+		'onboot'         => 'yes',
+		'onparent'       => 'yes',
+		'ipv4-bootproto' => 'disable',
+		'ipv6-bootproto' => 'disable'
 	},
 	'templates' => {
 		'ifAlias' => {
@@ -360,7 +363,7 @@ _nm_name='<IF_LABEL>'}
 			apply => {
 				1 => {
 					replace => 1,
-					content => q{<HOSTNAME>.<DOMAIN>}
+					content => q{<HOSTNAME><DOMAIN>}
 				}
 			}
 		},
@@ -380,6 +383,118 @@ _nm_name='<IF_LABEL>'}
 					replace => 1,
 					content => q{default <IF_IPV4_GATEWAY> - -
 default <IF_IPV6_GATEWAY> - -}
+				}
+			}
+		}
+	}
+};
+
+# Ubuntu Networks
+$common{'Ubuntu'} = {
+	'packages-bond' => [ 'ifenslave' ],
+	'remove'        => {
+		'prefix' => 'ifcfg-',
+		'path'   => '/etc/network/interfaces.d'
+	},
+	'defaults' => {
+		'bond-options'   => 'mode=1 miimon=100',
+		'ipv4'           => '',
+		'ipv4-prefix'    => '',
+		'ipv6'           => '',
+		'ipv6-prefix'    => '',
+		'onboot'         => 'yes',
+		'onparent'       => 'yes',
+		'ipv4-bootproto' => 'disable',
+		'ipv6-bootproto' => 'disable'
+	},
+	'files' => {
+		'interfaces' => {
+			path  => '/etc/network/interfaces',
+			save  => 'once',
+			apply => {
+				1 => {
+					'replace' => 1,
+					'content' => q{auto lo
+iface lo inet loopback}
+				},
+				2 => {
+					tail    => 1,
+					content => 'source /etc/network/interfaces.d/ifcfg-*'
+				}
+			}
+		},
+		'if' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			save  => 'once',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'ifSlave' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			save  => 'once',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'ifAlias' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			save  => 'once',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'ifBond' => {
+			path  => '/etc/network/interfaces.d/ifcfg-<IF_LABEL>',
+			save  => 'once',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{}
+				}
+			}
+		},
+		'hostname' => {
+			path  => '/etc/hostname',
+			save  => 'once',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{<HOSTNAME><DOMAIN>}
+				}
+			}
+		},
+		'persistent' => {
+			path  => '/etc/udev/rules.d/70-persistent-net.rules',
+			save  => 'once',
+			apply => {
+				1 => {
+					replace => 1,
+					content => q{SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="<IF_MAC>", ATTR{type}=="1", KERNEL=="eth*", NAME="<IF_LABEL>"}
+				}
+			}
+		},
+		'gai-precedence' => {
+			path  => '/etc/gai.conf',
+			save  => 'once',
+			apply => {
+				1 => {
+					'substitute' => {
+						1 => {
+							unique  => 1,
+							regex   => q{^(#|)\s*precedence\s+::ffff:0:0/96\s+100},
+							content => q{precedence ::ffff:0:0/96  100}
+						}
+					}
 				}
 			}
 		}
@@ -415,5 +530,8 @@ $network{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $network{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'}{10};
 $network{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $network{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$network{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$network{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

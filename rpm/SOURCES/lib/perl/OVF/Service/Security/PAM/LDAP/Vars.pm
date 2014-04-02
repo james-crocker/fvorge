@@ -25,9 +25,9 @@ our %pam;
 my %common;
 
 $common{'RHEL'} = {
-	'packages' => [ 'nss-pam-ldapd', 'pam_ldap' ],
+	'packages'       => [ 'nss-pam-ldapd',      'pam_ldap' ],
 	'packages-32bit' => [ 'nss-pam-ldapd.i686', 'pam_ldap.i686' ],
-	'task'     => {
+	'task'           => {
 		'enable'  => [ q{authconfig --enableldap --enableldapauth --ldapserver=<LDAP_SERVER> --ldapbasedn='<LDAP_BASEDN>' --update} ],
 		'disable' => [ q{authconfig --disableldap --disableldapauth --update} ]
 	}
@@ -37,12 +37,47 @@ $common{'RHEL'}{5}{packages} = [ 'nss_ldap' ];
 $common{'RHEL'}{5}{'packages-32bit'} = [ 'nss_ldap.i386' ];
 
 $common{'SLES'} = {
-	'packages' => [ 'openldap2-client', 'nss_ldap', 'pam_ldap' ],
-	'packages-32bit' => [ 'nss_ldap-32bit', 'pam_ldap-32bit' ],
-	'task'     => {
+	'packages'       => [ 'openldap2-client', 'nss_ldap', 'pam_ldap' ],
+	'packages-32bit' => [ 'nss_ldap-32bit',   'pam_ldap-32bit' ],
+	'task'           => {
 		'enable'  => [ q{yast2 --ncurses ldap pam enable server="<LDAP_SERVER>" base="<LDAP_BASEDN>"} ],
 		'disable' => [ q{yast2 --ncurses ldap pam disable} ]
 	}
+};
+
+$common{'Ubuntu'} = {
+	'packages' => [ 'libpam-ldap' ],
+	'files'    => {
+		'ldap-auth-config' => {
+			path  => '/tmp/ldap-auth-config.dat',
+			save  => 0,
+			chmod => 644,
+			apply => {
+				1 => {
+					replace => 1,
+					content => qq{ldap-auth-config\tldap-auth-config/bindpw\tpassword
+ldap-auth-config\tldap-auth-config/rootbindpw\tpassword\t<LDAP_ROOTBINDPW>  
+ldap-auth-config\tldap-auth-config/ldapns/ldap_version\tselect  3
+ldap-auth-config\tldap-auth-config/dbrootlogin\tboolean\tfalse
+ldap-auth-config\tldap-auth-config/move-to-debconf\tboolean\ttrue
+ldap-auth-config\tldap-auth-config/ldapns/ldap-server\tstring\t<LDAP_SERVER>
+ldap-auth-config\tldap-auth-config/override\tboolean\ttrue
+ldap-auth-config\tldap-auth-config/dblogin\tboolean\tfalse
+ldap-auth-config\tldap-auth-config/ldapns/base-dn string\t<LDAP_BASEDN>
+ldap-auth-config\tldap-auth-config/rootbinddn string\t<LDAP_ROOTBINDDN>
+ldap-auth-config\tldap-auth-config/binddn string\t<LDAP_BINDDN>
+ldap-auth-config\tldap-auth-config/pam_password\tselect\tmd5
+}
+				}
+			}
+		}
+	},
+	'task' => {}
+};
+
+$common{'Ubuntu'}{'task'} = {
+	'enable' => [ q{auth-client-config -t nss -p lac_ldap}, q{debconf-set-selections } . $common{'Ubuntu'}{'files'}{'ldap-auth-config'}{'path'} ],
+	'disable' => [ q{} ]
 };
 
 $pam{'RHEL'}{5}{9}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
@@ -69,5 +104,8 @@ $pam{'ORAL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 $pam{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'};
 $pam{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $pam{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
+
+$pam{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
+$pam{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;

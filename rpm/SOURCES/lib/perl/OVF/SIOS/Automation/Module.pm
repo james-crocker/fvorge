@@ -45,13 +45,13 @@ sub apply ( \% ) {
 	my $propertySetup   = 'sios.automation.setup';
 	my $propertyProduct = 'sios.product';
 
+    if ( !defined $OVF::SIOS::Automation::Vars::automate{$distro}{$major}{$minor}{$arch}{$product} ) {
+        Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
+        return;
+    }
+    
 	if ( !defined $options{ovf}{current}{$propertyProduct} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: $propertyProduct undefined} );
-		return;
-	}
-
-	if ( !defined $OVF::SIOS::Automation::Vars::automate{$distro}{$major}{$minor}{$arch}{$product} ) {
-		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
 
