@@ -486,11 +486,14 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		*if=1 (the order of 'physical' network interface adapters, generally 'top-down' in the VM guest host hardware properties)
 		*label=eth0 (arbitrary)
 		onboot=no (OPTIONAL RHEL ONLY, default is 'yes')
-        bootproto=static (OPTIONAL, default is 'static')
-		ipv4=172.17.105.60 (Default is '')
-		ipv4-prefix=22 (Default is '')
-		ipv6=2001:5C0:110E:3368::254 (Default is '')
-		ipv6-prefix=64 (Default is '')
+        +ipv4-bootproto=static (dhcp, static) if undefined, no ipv4 configured for the interface
+        +ipv6-bootproto=static (dhcp, auto, static) if undefined, no ipv6 configured for the interface
+		++ipv4=172.17.105.60 (Default is '')
+		++ipv4-prefix=22 (Default is '')
+		  ++ required if ipv4-bootproto=static
+		++ipv6=2001:5C0:110E:3368::254 (Default is '')
+		++ipv6-prefix=64 (Default is '')
+		  ++ required if ipv6-bootproto=static
 		
 		Interfaces that will be slaves to a BONDED interface:
 		*if=3
@@ -507,12 +510,16 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 			*if=1 (associated 'REAL' interface)
 			*label=eth0:1 (SLES should be label=# e.g. label=2)
 			onparent=no (OPTIONAL RHEL ONLY, default is 'yes')
-			ipv4=172.17.105.60 (Default is '')
-			ipv4-prefix=22 (Default is '')
-			ipv6=2001:5C0:110E:3368::254 (Default is '')
-			ipv6-prefix=64 (Default is '')
+			+ipv4-bootproto=static (dhcp, static) if undefined, no ipv4 configured for the interface
+            +ipv6-bootproto=static (dhcp, auto, static) if undefined, no ipv6 configured for the interface			
+			++ipv4=172.17.105.60 (Default is '')
+			++ipv4-prefix=22 (Default is '')
+			  ++ required if ipv4-bootproto=static			
+			+ipv6=2001:5C0:110E:3368::254 (Default is '')
+			+ipv6-prefix=64 (Default is '')
+			 ++ required if ipv6-bootproto=static			
 			
-			EXAMPLE: if=1 label=eth0:1 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5C0:110E:3368::254 ipv6-prefix=64 ;; if=2 label=eth1:1 ipv4=172.17.105.61 ipv4-prefix=22 ;; if=3 label=eth2:1 ipv6=2001:5C0:110E:3368::253 ipv6-prefix=64
+			EXAMPLE: if=1 label=eth0:1 ipv4=172.17.105.60 ipv4-prefix=22 ipv6=2001:5C0:110E:3368::254 ipv6-prefix=64 ipv6-bootproto=static;; if=2 label=eth1:1 ipv4-bootproto=dhcp ;; if=3 label=eth2:1 ipv6-bootproto=auto
 		
 		SLES Systems: (Can only define one set of IPv4|IPv6 aliases, but you can have multiple labels)
 			*if=1 (associated 'REAL' interface)
@@ -533,10 +540,14 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		*if-slaves=3,4 (associated 'REAL' interfaces defined with master-label)
 		opts=mode%3Dbalance-rr%20miimon%3D100 (OPTIONAL, default is mode=RoundRobin, miimon 100)
 		onboot=yes|no (OPTIONAL RHEL ONLY, default is 'yes')
-		ipv4=172.17.105.60 (Default is '')
-		ipv4-prefix=22 (Default is 24)
-		ipv6=2001:5C0:110E:3368::254 (Default is '')
-		ipv6-prefix=64 (Default is 64)
+		+ipv4-bootproto=static (dhcp, static) if undefined, no ipv4 configured for the interface
+        +ipv6-bootproto=static (dhcp, auto, static) if undefined, no ipv6 configured for the interface
+		++ipv4=172.17.105.60 (Default is '')
+		++ipv4-prefix=22 (Default is 24)
+		  ++ required if ipv4-bootproto=static
+		++ipv6=2001:5C0:110E:3368::254 (Default is '')
+		++ipv6-prefix=64 (Default is 64)
+          ++ required if ipv6-bootproto=static		
 
 =end text
 =item B<Base Services>

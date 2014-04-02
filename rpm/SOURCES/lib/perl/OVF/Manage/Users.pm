@@ -113,21 +113,20 @@ sub changePassword ( \%\% ) {
 
 	foreach my $user ( keys %ovfObject ) {
 		if ( defined $ovfObject{$user}{passwd} ) {
-			
+
 			my $passwd = $ovfObject{$user}{passwd};
-			
-			# DISABLE or IMPLEMENT LATER. RELY ON CRACKLIB-CHECK for good system password length. 20130501 jcrocker
-			#( Sys::Syslog::syslog( 'err', qq{$action PASSWORD FOR USER ($user) < 12; PASSWORD WAS NOT CHANGED!} ) and next) if ( length($passwd) < 12 );			
-			
+
 			my $crackCheckCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{crackCheckCmd};
-			
-			my $crack = qx{echo '$passwd' | $crackCheckCmd};
-			chomp($crack);
-			
-			if ( $crack !~ /:\s+OK$/ios ) {
-				( Sys::Syslog::syslog( 'err', qq{$action BAD PASSWORD FOR USER ($user) CRACKLIB-CHECK ($crack); PASSWORD WAS NOT CHANGED!} ) and next) if ( length($passwd) < 12 );
+
+			if ( -x $crackCheckCmd ) {
+				my $crack = qx{echo '$passwd' | $crackCheckCmd};
+				chomp( $crack );
+
+				if ( $crack !~ /:\s+OK$/ios ) {
+					( Sys::Syslog::syslog( 'err', qq{$action BAD PASSWORD FOR USER ($user) CRACKLIB-CHECK ($crack); PASSWORD WAS NOT CHANGED!} ) and next ) if ( length( $passwd ) < 12 );
+				}
 			}
-			
+
 			my $passwdCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{passwdCmd};
 			$passwdCmd =~ s/<PASSWD>/$passwd/;
 			$passwdCmd =~ s/<USER>/$user/;
