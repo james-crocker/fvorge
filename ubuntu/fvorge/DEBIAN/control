@@ -1,9 +1,0 @@
-Package: fvorge
-Section: admin
-Priority: extra
-Maintainer: James Crocker <james.crocker@us.sios.com>
-Version: 1.1.0
-Architecture: all
-Depends: perl
-Description: OVF
- OVF configurer
