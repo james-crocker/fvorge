@@ -4,11 +4,8 @@ TARGET=$1
 [ ! -d $TARGET ] && echo "Invalid target dir: '$TARGET'" && exit 1
 SOURCE=../src
 mkdir -p $TARGET/opt/fvorge
-pushd $SOURCE >/dev/null
-DIRS=$(find . -mindepth 1 -maxdepth 1 -name 'testcases' -prune -o -print)
-echo copy source dirs to pkg: $DIRS
-popd > /dev/null
-for d in $DIRS
+cp -a $SOURCE/* $TARGET/opt/fvorge/
+find $TARGET/opt/fvorge -type d -name 'testcases' -print | while read d
 do
-	cp -a $SOURCE/$d $TARGET/opt/fvorge/
+	rm -rf $d
 done
