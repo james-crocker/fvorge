@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use Distribution;
-fail();
+
 # does the distro id logic work?
 # note: if not building on ubuntu, just skip this for now...
 open(LSB, "< /etc/lsb-release") or die('no /etc/lsb-release');
