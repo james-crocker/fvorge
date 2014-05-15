@@ -1,8 +1,13 @@
+.PHONY: all clean package tests
+
 all:
 	/bin/true
 
 clean:
 	/bin/true
 
+package:
+	cd pkg && make
+
 tests:
-	/bin/true
+	cd tests && make tests

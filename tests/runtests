@@ -1,0 +1,33 @@
+#!/bin/bash
+# run unit test cases
+# Author: Paul Clements
+
+dir=$1
+if [ -z "$dir" ]
+then
+	pushd `dirname $0`/.. >/dev/null
+	dir=`pwd`
+	popd >/dev/null
+	echo "Running tests in $dir..." >&2
+fi
+
+err=0
+for f in `find $dir -type d -name testcases`
+do
+	echo "Running unit tests in $f"
+	pushd $f >/dev/null
+	for case in `find $f -type f -maxdepth 1`
+	do
+		[ -x "$case" ] || continue
+		echo "Test case executing: $case"
+		$case
+		errcode=$?
+		if [ $errcode -ne 0 ]
+		then
+			echo "ERROR: FAILED executing unit test case $case with error code $errcode"
+			err=1
+		fi
+	done
+	popd $f >/dev/null
+done
+exit $err

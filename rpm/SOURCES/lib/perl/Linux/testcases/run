@@ -1,0 +1,2 @@
+#!/bin/sh
+perl -MTest::Harness -e 'BEGIN {push @INC, "./lib"};runtests glob("t/*.t")'
