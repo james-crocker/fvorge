@@ -28,7 +28,7 @@ rm -rf $ROOT/rpm/RPMS/noarch/*rpm
 # Build the package
 #
 
-(cd pkg;make -s package)
+(cd redhat;make -s package)
 
 #
 # Copy package to the yum repo

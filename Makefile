@@ -7,7 +7,7 @@ clean:
 	/bin/true
 
 package:
-	cd pkg && make
+	cd ubuntu && make
 
 tests:
 	cd tests && make tests

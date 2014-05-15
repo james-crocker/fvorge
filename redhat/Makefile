@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
     
-include $(ROOT)/make.incl
+include make.incl
 
 SPEC=fvorge.spec
 
