@@ -15,16 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
 
-package OVF::Time::Module;
+package OVF::Service::Time::Zone::Module;
 
 use strict;
 use warnings;
 use POSIX;
 use Storable;
 
-use lib '../../../perl';
+use lib '../../../../../perl';
 use OVF::Manage::Files;
-use OVF::Time::Vars;
+use OVF::Service::Time::Zone::Vars;
 use OVF::State;
 use OVF::Vars::Common;
 use SIOS::CommonVars;
@@ -84,19 +84,23 @@ sub create (\%) {
 
 	my %timezoneTemplate = %{Storable::dclone($timeVars{files}{timezone})};
 	my %localtimeDef = %{Storable::dclone($timeVars{localtime})};
-	my $required = [ 'time.timezone' ];
+	my %taskDef = %{Storable::dclone($timeVars{task})};
+	my $required = [ 'host.time.zone' ];
 	my $requiredEnabled = [];
 	return if ( OVF::State::checkRequired( $action, $required, '', $requiredEnabled, %options ) );
-	my $timezone = $currentOvf{'time.timezone'};
+	my $timezone = $currentOvf{'host.time.zone'};
 
 	$timezoneTemplate{'apply'}{'1'}{'content'} =~ s/<TIMEZONE>/$timezone/g;
 	$localtimeDef{'source'} =~ s/<TIMEZONE>/$timezone/g;
 	$generatedFiles{'timezone'} = \%timezoneTemplate;
-	system("cp -f $localtimeDef{'source'} $localtimeDef{'path'}");
+	
+	$taskDef{'copysource'} =~ s/<TIMEZONE_SOURCE>/$localtimeDef{'source'}/;
+	$taskDef{'copysource'} =~ s/<TIMEZONE_PATH>/$localtimeDef{'path'}/;
+	OVF::Manage::Tasks::run( %options, @{ $taskDef{'copysource'} } );
 
 	OVF::Manage::Files::create( %options, %generatedFiles );
 	# now that files are in place, update debconf db, just to be tidy
-	system("dpkg-reconfigure -fnoninteractive tzdata");
+	OVF::Manage::Tasks::run( %options, @{ $taskDef{'dpkgreconfig'} } );
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 }
 
