@@ -28,6 +28,7 @@ use OVF::Network::Vars;
 use OVF::State;
 use OVF::Vars::Common;
 use SIOS::CommonVars;
+use Debug;
 
 my $sysDistro  = $SIOS::CommonVars::sysDistro;
 my $sysVersion = $SIOS::CommonVars::sysVersion;
@@ -170,14 +171,18 @@ sub create ( \% ) {
 	# Process the 'native' interfaces then aliases then bonded
 	my %netIf = %{ $currentOvf{'network.if'} };
 	foreach my $ifNum ( sort keys %netIf ) {
+		dbg "configuring interface: $netIf{$ifNum}{'label'}\n";
 
 		# Matching the 'VM MAC' with the defined interfaces. Order independent for the network.if
 		my $if = $netIf{$ifNum}{if};
 		( Sys::Syslog::syslog( 'err', qq{::SKIP:: network.if ($ifNum) 'if' not defined or not a digit } ) and next ) if ( !$if or !isdigit( $if ) );
 
 		my $mac = $netIf{$if}{mac};
-		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Interface ($if) No matching VM Interface MAC address } ) and next ) if ( !$mac );
-		$mac = lc( $mac );    # SLES seems sensitive to having lowercase mac for the udev rules
+		# don't worry about mac on ubuntu
+		if ($distro ne 'Ubuntu') {
+			( Sys::Syslog::syslog( 'err', qq{::SKIP:: Interface ($if) No matching VM Interface MAC address } ) and next ) if ( !$mac );
+			$mac = lc( $mac );    # SLES seems sensitive to having lowercase mac for the udev rules
+		}
 
 		my $label = $netIf{$ifNum}{label};
 		( Sys::Syslog::syslog( 'err', qq{::SKIP:: Interface ($if) Missing label } ) and next ) if ( !$label );
@@ -249,14 +254,14 @@ sub create ( \% ) {
 			if ( $distro eq 'Ubuntu' ) {
 				$ifTemplate{path} =~ s/<IF_LABEL>/$label/g;
 
-				my $macSet = 0;
+				# set the mac, unless none was given
+				my $macSet = ($mac) ? 0 : 1;
 
 				# IPv4 config
 				$ifTemplate{apply}{1}{content} .= qq{auto $label\n};
 
 				if ( $ipv4Bootproto ne 'disable' ) {
 					$ifTemplate{apply}{1}{content} .= qq{iface $label inet $ipv4Bootproto\n};
-
 					if ( !$macSet ) {
 						$ifTemplate{apply}{1}{content} .= qq{\thwaddress ether $mac\n};
 						$macSet = 1;

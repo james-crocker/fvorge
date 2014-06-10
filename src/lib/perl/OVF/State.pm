@@ -26,7 +26,9 @@ use POSIX;
 use Tie::File;
 use File::Path;
 use Digest::MD5;
+use Sys::Syslog;
 
+use Debug;
 use OVF::Vars::Common;
 use SIOS::CommonVars;
 
@@ -56,11 +58,12 @@ sub envSetup ( ) {
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
 	my $action      = $thisSubName;
 
-	if ( !-d $propertiesPath ) {
-		mkpath( $propertiesPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't create [ $propertiesPath ] ($?:$!)} ) and die );
+	if (! -d $propertiesPath) {
+		dbg "create properties path: $propertiesPath\n";
+		mkpath($propertiesPath) or (Sys::Syslog::syslog('err', qq{$action Couldn't create [ $propertiesPath ] ($?:$!)}) and die);
 	}
 
-	if ( !-d $originalsPath ) {
+	if (! -d $originalsPath) {
 		mkpath( $originalsPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't create [ $originalsPath ] ($?:$!)} ) and die );
 	}
 
@@ -71,15 +74,21 @@ sub ovfCompareNotEqual ( $\% ) {
 	my $ovf = shift;
 	my %options = %{ ( shift ) };
 
+	# global "always" flag is set, so always change this set of properties
+	my $group = (split '\.', $ovf)[0];
+	return 1 if defined $options{ovf}{'current'}{$group}{'always'};
+
 	# These are 'grouped' items
 	if ( $ovf =~ /$groupedProperties/ ) {
 
 		foreach my $itemNum ( keys %{ $options{ovf}{current}{$ovf} } ) {
-
+			dbg "compare item: $ovf $itemNum\n";
 			# Value is always changed if there was no previous applied property
 			return 1 if !defined $options{ovf}{previous}{$ovf}{$itemNum};
+			# "always" flag is set, so always change this property
+			return 1 if defined $options{ovf}{'current'}{$ovf}{$itemNum}{'always'};
 
-			foreach my $scanProperty ( sort keys %{ $options{ovf}{previous}{$ovf}{$itemNum} } ) {
+			foreach my $scanProperty (keys %{$options{ovf}{previous}{$ovf}{$itemNum}}) {
 				my $current  = $options{ovf}{current}{$ovf}{$itemNum}{$scanProperty};
 				my $previous = $options{ovf}{previous}{$ovf}{$itemNum}{$scanProperty};
 				return 1 if ( Digest::MD5::md5_hex( $current ) ne Digest::MD5::md5_hex( $previous ) );
@@ -87,21 +96,21 @@ sub ovfCompareNotEqual ( $\% ) {
 		}
 
 	} else {
+		dbg "compare nongroup item: $ovf\n";
 
-		# Value is alwasy changed if there was no previous applied property
+		# Value is always changed if there was no previous applied property
 		return 1 if !defined $options{ovf}{previous}{$ovf};
 
 		my $current  = $options{ovf}{current}{$ovf};
 		my $previous = $options{ovf}{previous}{$ovf};
 		return 1 if ( Digest::MD5::md5_hex( $current ) ne Digest::MD5::md5_hex( $previous ) );
 	}
-
+	dbg "current and previous items equal: $ovf\n";
 	return 0;
 
 }
 
 sub ovfIsChanged ( $\% ) {
-
 	my $property = shift;
 	my %options = %{ ( shift ) };
 
@@ -110,20 +119,19 @@ sub ovfIsChanged ( $\% ) {
 
 	# Search over the whole ovf class space eg. network.*
 	if ( $property =~ /(\S+)\.\*/ ) {
-
 		my $class = $1;
 
 		foreach my $ovf ( keys %{ $options{ovf}{current} } ) {
-
+			dbg "check for class property change: $class $ovf\n";
 			if ( $ovf =~ /$class\..+/ ) {
-
-				return ovfCompareNotEqual( $ovf, %options );
-
+				my $diff = ovfCompareNotEqual($ovf, %options);
+				return 1 if ($diff == 1);
 			}
 		}
-
+		dbg "all subproperties equal: $property\n";
+		return 0; # all the same
 	} else {
-
+		dbg "check for property change: $property\n";
 		return ovfCompareNotEqual( $property, %options );
 
 	}
@@ -434,9 +442,7 @@ sub parseOvfProperties ( \@ ) {
 	}
 
 	if ( %ovfPropertyCollection ) {
-
-		#printOvfProperties( '', %ovfPropertyCollection );
-
+		dbg_hash('Parsed Properties', \%ovfPropertyCollection);
 		return \%ovfPropertyCollection;
 	} else {
 		return {};
@@ -467,7 +473,7 @@ sub propertiesGetCurrent ( \% ) {
 	}
 
 	$options->{ovf}{current} = parseOvfProperties( @currentOvfProperties );
-
+	dbg_hash('Current Properties', $options->{ovf}{current});
 	my $required = [ 'host.architecture', 'host.cluster', 'host.distribution', 'host.instance', 'host.major', 'host.minor' ];
 	my $requiredEnabled = [];
 	die if ( checkRequired( $action, $required, '', $requiredEnabled, %{$options} ) );
@@ -537,6 +543,10 @@ sub propertiesGetGroup ( $\@ ) {
 
 	foreach my $key ( @{$printedOptions} ) {
 
+		if ($groupType eq 'time' and $key =~ /time/) {
+			push @groupProperties, $key;
+		}
+
 		if ( $groupType eq 'network' and ( $key =~ /^(host|network)\./ or $key =~ /^custom\.$groupType/ ) ) {
 			push( @groupProperties, $key );
 		}
@@ -583,6 +593,7 @@ sub propertiesApplied ( $\%) {
 	my @current  = propertiesGetGroup( $appliedType, @printedCurrentProperties );
 	my @previous = propertiesGetGroup( $appliedType, @printedPreviousProperties );
 
+	dbg "prev: @previous\ncur: @current\n";
 	my $currentMd5  = Digest::MD5::md5_hex( @current );
 	my $previousMd5 = Digest::MD5::md5_hex( @previous );
 

@@ -533,5 +533,13 @@ $network{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
 $network{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
 $network{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
+# HACK: due to a bug in 13.10, interfaces.d files are not read by ifup/down
+# so put the if config in /etc/network/interfaces
+$network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'apply'}{'0'} = $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'interfaces'}{'apply'}{'1'};
+delete $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'interfaces'}{'apply'};
+$network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'path'} = '/etc/network/interfaces';
+delete $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'apply'}{'1'}{'replace'};
+$network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'apply'}{'1'}{'tail'} = 1;
+delete $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'persistent'};
 
 1;
