@@ -48,7 +48,7 @@ sub apply (\%) {
 	my $minor  = $options{ovf}{current}{'host.minor'};
 
 	# Check if any config before processing
-	if ( !defined $OVF::Time::Vars::time{$distro}{$major}{$minor}{$arch} ) {
+	if ( !defined $OVF::Service::Time::Zone::Vars::time{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
@@ -78,7 +78,7 @@ sub create (\%) {
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
-	my %timeVars = %{ $OVF::Time::Vars::time{$distro}{$major}{$minor}{$arch} };
+	my %timeVars = %{ $OVF::Service::Time::Zone::Vars::time{$distro}{$major}{$minor}{$arch} };
 
 	my %generatedFiles;    # Collect created files for later creation
 
@@ -118,7 +118,7 @@ sub destroy (\%) {
 
 	# my $rmCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{rmCmd};
 
-	# my %timeVars = %{$OVF::Time::Vars::time{$distro}{$major}{$minor}{$arch}};
+	# my %timeVars = %{$OVF::Service::Time::Zone::Vars::time{$distro}{$major}{$minor}{$arch}};
 
 	Sys::Syslog::syslog('info', qq{$action INITIATE ...});
 	# ...nothing for now...
