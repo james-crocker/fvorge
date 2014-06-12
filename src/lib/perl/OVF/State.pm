@@ -27,6 +27,7 @@ use Tie::File;
 use File::Path;
 use Digest::MD5;
 use Sys::Syslog;
+use Net::IPv4Addr;
 
 use Debug;
 use OVF::Vars::Common;
@@ -173,7 +174,7 @@ sub normalizeTrueFalse ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|packages-32bit|add-sshd|syslog-emerg|booton|genkeypair)$';
+	my $requiredTrueFalse = '^(enabled|disabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|packages-32bit|add-sshd|syslog-emerg|booton|genkeypair)$';
 	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
 
 	if ( $item !~ /,/ ) {
@@ -355,12 +356,37 @@ sub parseOvfProperties ( \@ ) {
 			if ( !isSaneDoubleParens( $value ) ) {
 				Sys::Syslog::syslog( 'warning', "$action WARNING: Possible missed grouping; expecting ' ;; ' ($value)" );
 			}
-
-			# Breakout 'grouped' properties like NIC, Services
-			# item=val,item=val;;item=val,item=val;;item=val,item=val
-			# Always set group for 'network.if' or 'storage.fs' or 'storage.lvm' since depend on at least one group.
-			if ( $value =~ /\s+;;\s+/ or $key =~ /$groupedProperties/ ) {
-
+			
+			if ( $key =~ /^lite\./) {
+				#20140610 Marshal 'lite' settings into original ovf properties. Allows for ungrouping properties
+				# and presenting as individual elements in the vCenter vApp properties dialog. 'lite' only supports
+				# one network interface configuration.
+				my $originalKey = $';
+				my $item = decodeURL( $value );
+				if ( $originalKey =~ /^(network\.label|network\.ipv4|network\.ipv4-bootproto|network\.ipv4-prefix)$/ ) {
+					if ( $originalKey =~ /^network\./ ) {
+							$originalKey = $';
+					}
+					$ovfPropertyCollection{'network.if'}{1}{'if'} = 1;
+					$item = normalizeYesNo( $originalKey, $item );
+					$item = normalizeTrueFalse( $originalKey, $item );
+					if ( $originalKey =~ /^ipv4-prefix$/ ) {
+						# Convert to cidr if octet
+						if ( $item =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ ) {
+							$item = Net::IPv4Addr::ipv4_msk2cidr( $item );
+						}
+					}
+					$ovfPropertyCollection{'network.if'}{1}{$originalKey} = $item;
+				} else {
+					$item = normalizeYesNo( $originalKey, $item );
+					$item = normalizeTrueFalse( $originalKey, $item );
+					$ovfPropertyCollection{$originalKey} = $item;
+				}
+			} elsif ( $value =~ /\s+;;\s+/ or $key =~ /$groupedProperties/ ) {
+			
+				# Breakout 'grouped' properties like NIC, Services
+				# item=val,item=val;;item=val,item=val;;item=val,item=val
+				# Always set group for 'network.if' or 'storage.fs' or 'storage.lvm' since depend on at least one group.
 				my $groupCount = 1;
 				foreach my $groupSelection ( ( split /\s+;;\s+/, $value ) ) {
 
@@ -418,7 +444,8 @@ sub parseOvfProperties ( \@ ) {
 			} else {
 				my $item = decodeURL( $value );
 				$item = normalizeYesNo( $key, $item );
-				$item = normalizeTrueFalse( $key, $item );
+				$item = normalizeTrueFalse( $key, $item );				
+				
 				$ovfPropertyCollection{$key} = $item;
 			}
 
@@ -542,9 +569,9 @@ sub propertiesGetGroup ( $\@ ) {
 	my @groupProperties;
 
 	foreach my $key ( @{$printedOptions} ) {
-
-		if ($groupType eq 'time' and $key =~ /time/) {
-			push @groupProperties, $key;
+		
+		if ( $groupType eq 'lite' and ( $key =~ /^lite\./ or $key =~ /^custom\.$groupType/ ) ) {
+			push( @groupProperties, $key );
 		}
 
 		if ( $groupType eq 'network' and ( $key =~ /^(host|network)\./ or $key =~ /^custom\.$groupType/ ) ) {
@@ -578,10 +605,15 @@ sub propertiesApplied ( $\%) {
 	my $appliedType = shift;
 	my $options     = shift;
 
+    # If no type(group) then process the properties regardless of any previous settings
 	return 0 if ( !$appliedType );
+	
+	# If asked not to apply any properties
+	return 1 if ( exists $options->{ovf}{current}{'fvorge.disabled'} and $options->{ovf}{current}{'fvorge.disabled'} );
 
 	propertiesGetPrevious( $appliedType, %{$options} );
-
+	
+	# If no previous then apply any current changes
 	return 0 if ( !exists $options->{ovf}{previous} or !defined $options->{ovf}{previous} );
 
 	my @printedCurrentProperties;

@@ -186,6 +186,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	OVF::Service::Storage::ISCSI::Module::apply( %options );
 	OVF::Service::Storage::Multipath::Module::apply( %options );
 	#OVF::Service::Storage::MD::Module::apply( %options );
+	OVF::Service::Time::Zone::apply( %options );
 	OVF::Service::Time::NTP::Module::apply( %options );
 	OVF::SIOS::Automation::Module::apply( %options );
 	OVF::Custom::Module::apply( $customGroup, 'after', %options );
@@ -299,6 +300,7 @@ SUPPORTING:
         Distributions:
                 RHEL|CentOS|ORAL (MAJOR.MINOR) 5.9, 6.0, 6.1, 6.2, 6.3, 6.4
                 SLES (MAJOR.MINOR) 10.4, 11.2, 11.2
+                UBUNTU (MAJOR.MINOR) 13.10, 14.04
         Architectures:
                 x86_64|i686 (ALL DISTROS)
         
@@ -362,6 +364,7 @@ Packages
 	OVF::Service::Storage::ISCSI::Packages::apply
 	OVF::Service::Storage::Multipath::Packages::apply
 	#OVF::Service::Storage::MD::Packages::apply
+	OVF::Service::Time::Zone::apply
 	OVF::Service::Time::NTP::Packages::apply
 	OVF::SIOS::Automation::Packages::apply
 	OVF::SIOS::Prerequisites::Packages::apply
@@ -424,13 +427,21 @@ Declarations prefixed with * are REQUIRED (with exceptions noted)
 Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|destroy are TRUE (with exceptions noted)
 
 =end text
+=item B<Fvorge>
+=begin text
+-------------------------
+
+	To *disable* the application of properties via fvorge. (OPTIONAL, default is enabled)
+	[fvorge.disable]: true|false|t|f|yes|no|y|n|0|1
+	
+=end text
 =item B<Host>
 =begin text
 -------------------------
 
 	Architecture [host]: (ovf value; but userConfigurable=false)
 	    *architecture=x86_64|i686
-        *distribution=RHEL|CentOS|ORAL|SLES
+        *distribution=RHEL|CentOS|ORAL|SLES|Ubuntu
         *major=#
         *minor=#
         *cluster=#
@@ -447,7 +458,9 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 		distribution=SLES
 		major=11
 		minor=2
-       
+
+	Timezone [host.time.zone]: GMT+-# (Default is GMT-0)
+
 	Language [host.locale]: (may be empty)
 		change=n (DEFAULT is NO)
 		+lang=EN|DE|KR|JP (DEFAULT is EN)
