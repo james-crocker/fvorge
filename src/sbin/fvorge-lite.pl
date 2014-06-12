@@ -147,7 +147,7 @@ The order of ovf processing is:
 Lite
 	OVF::Custom::Module::apply( 'custom.network', 'before' )
 	OVF::Network::Module::apply
-	OVF::Service::Time::Zone::apply
+	OVF::Service::Time::Zone::Module::apply
 	OVF::Custom::Module::apply( 'custom.network', 'after' )
 	--reboot--
  

@@ -63,6 +63,7 @@ use OVF::Service::Storage::Multipath::Module;
 use OVF::Service::Storage::Multipath::Packages;
 use OVF::Service::Time::NTP::Module;
 use OVF::Service::Time::NTP::Packages;
+use OVF::Service::Time::Zone::Module;
 use OVF::Storage::Filesystems::Module;
 use OVF::Storage::LVM::Module;
 use OVF::SIOS::Automation::Module;
@@ -186,7 +187,7 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 	OVF::Service::Storage::ISCSI::Module::apply( %options );
 	OVF::Service::Storage::Multipath::Module::apply( %options );
 	#OVF::Service::Storage::MD::Module::apply( %options );
-	OVF::Service::Time::Zone::apply( %options );
+	OVF::Service::Time::Zone::Module::apply( %options );
 	OVF::Service::Time::NTP::Module::apply( %options );
 	OVF::SIOS::Automation::Module::apply( %options );
 	OVF::Custom::Module::apply( $customGroup, 'after', %options );
@@ -364,7 +365,6 @@ Packages
 	OVF::Service::Storage::ISCSI::Packages::apply
 	OVF::Service::Storage::Multipath::Packages::apply
 	#OVF::Service::Storage::MD::Packages::apply
-	OVF::Service::Time::Zone::apply
 	OVF::Service::Time::NTP::Packages::apply
 	OVF::SIOS::Automation::Packages::apply
 	OVF::SIOS::Prerequisites::Packages::apply
@@ -384,6 +384,7 @@ Host-Services
 	OVF::Service::Storage::Multipath::Module::apply
 	#OVF::Service::Storage::MD::Module::apply
 	OVF::Service::Time::NTP::Module::apply
+	OVF::Service::Time::Zone::Module::apply
 	OVF::SIOS::Automation::Module::apply
 	OVF::Custom::Module::apply( 'custom.host-services', 'after' )
 	--reboot--
