@@ -563,10 +563,6 @@ sub propertiesGetGroup ( $\@ ) {
 	my @groupProperties;
 
 	foreach my $key ( @{$printedOptions} ) {
-		
-		if ( $groupType eq 'lite' and ( $key =~ /^lite\./ or $key =~ /^custom\.$groupType/ ) ) {
-			push( @groupProperties, $key );
-		}
 
 		if ( $groupType eq 'network' and ( $key =~ /^(host|network)\./ or $key =~ /^custom\.$groupType/ ) ) {
 			push( @groupProperties, $key );

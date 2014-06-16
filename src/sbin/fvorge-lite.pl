@@ -60,7 +60,7 @@ OVF::State::propertiesGetCurrent( %options );
 # IF YOU CHANGE THE ORDER OR ADD SERVICES CHECK OVF::State::propertiesGetGroup FOR CHANGES
 
 # Only run if changes by checking for previously saved 'properties-network|packages...' file
-my $group = 'lite';
+my $group = 'network';
 my $customGroup = 'custom.'.$group;
 my $action = "FVORGE $group";
 if ( !OVF::State::propertiesApplied( $group, %options ) ) {
