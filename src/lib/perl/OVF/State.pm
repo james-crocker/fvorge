@@ -75,10 +75,6 @@ sub ovfCompareNotEqual ( $\% ) {
 	my $ovf = shift;
 	my %options = %{ ( shift ) };
 
-	# global "always" flag is set, so always change this set of properties
-	my $group = (split '\.', $ovf)[0];
-	return 1 if defined $options{ovf}{'current'}{$group}{'always'};
-
 	# These are 'grouped' items
 	if ( $ovf =~ /$groupedProperties/ ) {
 
@@ -86,8 +82,6 @@ sub ovfCompareNotEqual ( $\% ) {
 			dbg "compare item: $ovf $itemNum\n";
 			# Value is always changed if there was no previous applied property
 			return 1 if !defined $options{ovf}{previous}{$ovf}{$itemNum};
-			# "always" flag is set, so always change this property
-			return 1 if defined $options{ovf}{'current'}{$ovf}{$itemNum}{'always'};
 
 			foreach my $scanProperty (keys %{$options{ovf}{previous}{$ovf}{$itemNum}}) {
 				my $current  = $options{ovf}{current}{$ovf}{$itemNum}{$scanProperty};
