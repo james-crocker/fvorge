@@ -572,7 +572,7 @@ sub propertiesGetGroup ( $\@ ) {
 			push( @groupProperties, $key );
 		}
 
-		if ( $groupType eq 'host-services' and ( $key =~ /^service\.[^\.]+\.(apparmor|firewall|ntp|pam\.ldap|selinux|snmp|sshd|syslog|xserver|md|iscsi|multipath)\./ or $key =~ /^host\.locale\./ or $key =~ /^sios\.automation\./ or $key =~ /^custom\.$groupType/ ) ) {
+		if ( $groupType eq 'host-services' and ( $key =~ /^service\.[^\.]+\.(apparmor|firewall|ntp|pam\.ldap|selinux|snmp|sshd|syslog|xserver|md|iscsi|multipath)\./ or $key =~ /^host\.(locale|time)\./ or $key =~ /^sios\.automation\./ or $key =~ /^custom\.$groupType/ ) ) {
 			push( @groupProperties, $key );
 		}
 
