@@ -77,8 +77,9 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'selinuxRestoreCmd'} = 'restorecon -
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{runlevelCmd} = 'runlevel | awk \'{print $2}\'';
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Network::Module::destroy'}{rmCmd}             = 'rm -f';
-$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Network::Module::restartNetwork'}{restartCmd} = '/etc/init.d/network restart';
-$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Network::Module::restartNetwork'}{restartCmd}   = 'service networking restart';
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Network::Module::restartNetwork'}{restartCmds} = [q(/etc/init.d/network restart)];
+$sysCmds{'ubuntu'}{$sysVersion}{$sysArch}{'OVF::Network::Module::restartNetwork'}{restartCmds}   = [q(ifdown -a), q(ifup -a)];
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Network::Module::resetHostname'}{resetCmd}    = 'hostname --file /etc/hostname';
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Service::Database::Oracle::Module::create'}{sysctlCmd} = 'sysctl -p';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{'OVF::Service::Database::Sybase::Module::create'}{sysctlCmd} = 'sysctl -p';

@@ -61,19 +61,21 @@ OVF::State::propertiesGetCurrent( %options );
 
 # Only run if changes by checking for previously saved 'properties-network|packages...' file
 my $group = 'lite';
-#my $customGroup = 'custom.'.$group;
+my $customGroup = 'custom.'.$group;
 my $action = "FVORGE $group";
 if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 
 	Sys::Syslog::syslog( 'info', qq{$action APPLY ...} );
 
+	OVF::Custom::Module::apply( $customGroup, 'before', %options );
 	OVF::Network::Module::apply( %options );
 	OVF::Service::Time::Zone::Module::apply( %options );
+	OVF::Custom::Module::apply( $customGroup, 'after', %options );
 
 	OVF::State::propertiesSave( $group, %options );
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 
-	OVF::VApp::restart( %options );
+	#OVF::VApp::restart( %options );
 
 } else {
 	Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: PREVIOUSLY APPLIED} );
@@ -145,11 +147,10 @@ Any settings value that contain reserved characters must be escaped.
 The order of ovf processing is:
 
 Lite
-	OVF::Custom::Module::apply( 'custom.network', 'before' )
+	OVF::Custom::Module::apply( 'custom.lite', 'before' )
 	OVF::Network::Module::apply
 	OVF::Service::Time::Zone::Module::apply
-	OVF::Custom::Module::apply( 'custom.network', 'after' )
-	--reboot--
+	OVF::Custom::Module::apply( 'custom.lite', 'after' )
  
 Declarations prefixed with * are REQUIRED (with exceptions noted)
 Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|destroy are TRUE (with exceptions noted)
@@ -221,7 +222,7 @@ Declarations prefixed with + are REQUIRED *IF* change|enabled|available|create|d
 	For executing administrator defined actions in each of the fvorge 'group' actions. 
 	The order of execution precedence is from left to right.
 	
-	[custom.[network|packages|host-services|storage|app-services]]: (may be empty)
+	[custom.lite]: (may be empty)
 	
 	+priority=before|after
 	+action=<arbitrary command; be sure to escape special characters as defined above> [;; priority=before|after action=<cmd> ...]

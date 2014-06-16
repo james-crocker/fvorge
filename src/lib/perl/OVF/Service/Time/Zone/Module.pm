@@ -94,8 +94,9 @@ sub create (\%) {
 	$localtimeDef{'source'} =~ s/<TIMEZONE>/$timezone/g;
 	$generatedFiles{'timezone'} = \%timezoneTemplate;
 	
-	$taskDef{'copysource'} =~ s/<TIMEZONE_SOURCE>/$localtimeDef{'source'}/;
-	$taskDef{'copysource'} =~ s/<TIMEZONE_PATH>/$localtimeDef{'path'}/;
+	$taskDef{'copysource'}[0] =~ s/<TIMEZONE_SOURCE>/$localtimeDef{'source'}/;
+	$taskDef{'copysource'}[0] =~ s/<TIMEZONE_PATH>/$localtimeDef{'path'}/;
+
 	OVF::Manage::Tasks::run( %options, @{ $taskDef{'copysource'} } );
 
 	OVF::Manage::Files::create( %options, %generatedFiles );

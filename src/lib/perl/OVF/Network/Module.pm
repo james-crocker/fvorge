@@ -59,13 +59,14 @@ sub apply ( \% ) {
 		Sys::Syslog::syslog( 'info', qq{$action ...} );
 		destroy( \%options );
 		create( \%options );
+		resetHostname ( \%options ); # May avoid needing to reboot
+		restartNetwork ( \%options ); # May avoid needing to reboot
 	} else {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO changes to apply; Current network.* same as Previous properties} );
 		return;
 	}
 }
 
-#restartNetwork ( \%options );
 
 sub create ( \% ) {
 
@@ -677,11 +678,35 @@ sub restartNetwork ( \% ) {
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
 
-	my $restartCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{restartCmd};
+	my @restartCmds = @{ $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{restartCmds} };
 
 	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
 
-	system( qq{$restartCmd $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{Couldn't restart the network ($restartCmd) ($?:$!) } );
+	foreach my $restartCmd ( @restartCmds ) {
+		system( qq{$restartCmd $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{Couldn't restart the network ($restartCmd) ($?:$!) } );
+	}
+
+	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
+
+}
+
+sub resetHostname ( \% ) {
+
+	my $thisSubName = ( caller( 0 ) )[ 3 ];
+
+	my %options = %{ ( shift ) };
+
+	my $action = $thisSubName;
+	my $arch   = $options{ovf}{current}{'host.architecture'};
+	my $distro = $options{ovf}{current}{'host.distribution'};
+	my $major  = $options{ovf}{current}{'host.major'};
+	my $minor  = $options{ovf}{current}{'host.minor'};
+
+	my $resetCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{$thisSubName}{resetCmd};
+
+	Sys::Syslog::syslog( 'info', qq{$action INITIATE ...} );
+
+	system( qq{$resetCmd $quietCmd} ) == 0 or Sys::Syslog::syslog( 'warning', qq{Couldn't reset the hostname ($resetCmd) ($?:$!) } );
 
 	Sys::Syslog::syslog( 'info', qq{$action COMPLETE} );
 

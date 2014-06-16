@@ -605,7 +605,7 @@ sub propertiesApplied ( $\%) {
 	my $appliedType = shift;
 	my $options     = shift;
 
-    # If no type(group) then process the properties regardless of any previous settings
+	#If no type(group) then process the properties regardless of any previous settings
 	return 0 if ( !$appliedType );
 	
 	# If asked not to apply any properties
