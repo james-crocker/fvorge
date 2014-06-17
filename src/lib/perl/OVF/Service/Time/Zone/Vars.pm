@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
 
-package OVF::Time::Vars;
+package OVF::Service::Time::Zone::Vars;
 
 use strict;
 use warnings;
@@ -25,9 +25,8 @@ my %common;
 
 # Ubuntu Time
 $common{'Ubuntu'} = {
-	'defaults' => {
-	},
-	'files' => {
+	'defaults' => {},
+	'files'    => {
 		'timezone' => {
 			path  => '/etc/timezone',
 			apply => {
@@ -39,9 +38,13 @@ $common{'Ubuntu'} = {
 		},
 	},
 	'localtime' => {
-		path  => '/etc/localtime',
+		path   => '/etc/localtime',
 		source => "/usr/share/zoneinfo/<TIMEZONE>"
 	},
+	'task' => {
+		'copysource'   => [q{cp -f <TIMEZONE_SOURCE> <TIMEZONE_PATH>}],
+		'dpkgreconfig' => [q{dpkg-reconfigure -fnoninteractive tzdata}]
+	}
 };
 
 $time{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};

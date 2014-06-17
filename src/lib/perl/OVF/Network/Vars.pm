@@ -193,7 +193,7 @@ LABEL_<IF_LABEL>='<IF_LABEL>'}
 					replace => 1,
 					content => q{BOOTPROTO='<IF_BOOTPROTO>'
 IPADDR='<IF_IPV4>/<IF_IPV4_PREFIX>'
-NAME='E1000 Ethernet Controller'
+NAME='Ethernet Controller'
 STARTMODE='auto'
 USERCONTROL='no'
 LABEL_0='0'
@@ -228,7 +228,7 @@ NETMASK_0='<IF_IPV6_PREFIX>'}
 				1 => {
 					replace => 1,
 					content => q{BOOTPROTO='none'
-NAME='E1000 Ethernet Controller'
+NAME='Ethernet Controller'
 STARTMODE='auto'
 USERCONTROL='no'}
 				}
@@ -306,7 +306,7 @@ NETMASK_<IF_LABEL>='<IF_IP_PREFIX>'}
 					replace => 1,
 					content => q{BOOTPROTO='<IF_BOOTPROTO>'
 IPADDR='<IF_IPV4>/<IF_IPV4_PREFIX>'
-NAME='E1000 Ethernet Controller'
+NAME='Ethernet Controller'
 STARTMODE='auto'
 USERCONTROL='no'
 _nm_name='<IF_LABEL>'
@@ -342,7 +342,7 @@ NETMASK_0='<IF_IPV6_PREFIX>'}
 				1 => {
 					replace => 1,
 					content => q{BOOTPROTO='none'
-NAME='E1000 Ethernet Controller'
+NAME='Ethernet Controller'
 STARTMODE='auto'
 USERCONTROL='no'
 _nm_name='<IF_LABEL>'}

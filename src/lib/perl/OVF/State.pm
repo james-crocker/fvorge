@@ -27,6 +27,7 @@ use Tie::File;
 use File::Path;
 use Digest::MD5;
 use Sys::Syslog;
+use Net::IPv4Addr;
 
 use Debug;
 use OVF::Vars::Common;
@@ -74,10 +75,6 @@ sub ovfCompareNotEqual ( $\% ) {
 	my $ovf = shift;
 	my %options = %{ ( shift ) };
 
-	# global "always" flag is set, so always change this set of properties
-	my $group = (split '\.', $ovf)[0];
-	return 1 if defined $options{ovf}{'current'}{$group}{'always'};
-
 	# These are 'grouped' items
 	if ( $ovf =~ /$groupedProperties/ ) {
 
@@ -85,8 +82,6 @@ sub ovfCompareNotEqual ( $\% ) {
 			dbg "compare item: $ovf $itemNum\n";
 			# Value is always changed if there was no previous applied property
 			return 1 if !defined $options{ovf}{previous}{$ovf}{$itemNum};
-			# "always" flag is set, so always change this property
-			return 1 if defined $options{ovf}{'current'}{$ovf}{$itemNum}{'always'};
 
 			foreach my $scanProperty (keys %{$options{ovf}{previous}{$ovf}{$itemNum}}) {
 				my $current  = $options{ovf}{current}{$ovf}{$itemNum}{$scanProperty};
@@ -173,7 +168,7 @@ sub normalizeTrueFalse ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredTrueFalse = '^(enabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|packages-32bit|add-sshd|syslog-emerg|booton|genkeypair)$';
+	my $requiredTrueFalse = '^(enabled|disabled|packages|setup|change|initdb|clear-storage|prerequisites|fstab|mount|packages-32bit|add-sshd|syslog-emerg|booton|genkeypair)$';
 	return $item if ( $key ne '' and $key !~ /$requiredTrueFalse/ );
 
 	if ( $item !~ /,/ ) {
@@ -355,12 +350,37 @@ sub parseOvfProperties ( \@ ) {
 			if ( !isSaneDoubleParens( $value ) ) {
 				Sys::Syslog::syslog( 'warning', "$action WARNING: Possible missed grouping; expecting ' ;; ' ($value)" );
 			}
-
-			# Breakout 'grouped' properties like NIC, Services
-			# item=val,item=val;;item=val,item=val;;item=val,item=val
-			# Always set group for 'network.if' or 'storage.fs' or 'storage.lvm' since depend on at least one group.
-			if ( $value =~ /\s+;;\s+/ or $key =~ /$groupedProperties/ ) {
-
+			
+			if ( $key =~ /^lite\./) {
+				#20140610 Marshal 'lite' settings into original ovf properties. Allows for ungrouping properties
+				# and presenting as individual elements in the vCenter vApp properties dialog. 'lite' only supports
+				# one network interface configuration.
+				my $originalKey = $';
+				my $item = decodeURL( $value );
+				if ( $originalKey =~ /^(network\.label|network\.ipv4|network\.ipv4-bootproto|network\.ipv4-prefix)$/ ) {
+					if ( $originalKey =~ /^network\./ ) {
+							$originalKey = $';
+					}
+					$ovfPropertyCollection{'network.if'}{1}{'if'} = 1;
+					$item = normalizeYesNo( $originalKey, $item );
+					$item = normalizeTrueFalse( $originalKey, $item );
+					if ( $originalKey =~ /^ipv4-prefix$/ ) {
+						# Convert to cidr if octet
+						if ( $item =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ ) {
+							$item = Net::IPv4Addr::ipv4_msk2cidr( $item );
+						}
+					}
+					$ovfPropertyCollection{'network.if'}{1}{$originalKey} = $item;
+				} else {
+					$item = normalizeYesNo( $originalKey, $item );
+					$item = normalizeTrueFalse( $originalKey, $item );
+					$ovfPropertyCollection{$originalKey} = $item;
+				}
+			} elsif ( $value =~ /\s+;;\s+/ or $key =~ /$groupedProperties/ ) {
+			
+				# Breakout 'grouped' properties like NIC, Services
+				# item=val,item=val;;item=val,item=val;;item=val,item=val
+				# Always set group for 'network.if' or 'storage.fs' or 'storage.lvm' since depend on at least one group.
 				my $groupCount = 1;
 				foreach my $groupSelection ( ( split /\s+;;\s+/, $value ) ) {
 
@@ -418,7 +438,8 @@ sub parseOvfProperties ( \@ ) {
 			} else {
 				my $item = decodeURL( $value );
 				$item = normalizeYesNo( $key, $item );
-				$item = normalizeTrueFalse( $key, $item );
+				$item = normalizeTrueFalse( $key, $item );				
+				
 				$ovfPropertyCollection{$key} = $item;
 			}
 
@@ -543,10 +564,6 @@ sub propertiesGetGroup ( $\@ ) {
 
 	foreach my $key ( @{$printedOptions} ) {
 
-		if ($groupType eq 'time' and $key =~ /time/) {
-			push @groupProperties, $key;
-		}
-
 		if ( $groupType eq 'network' and ( $key =~ /^(host|network)\./ or $key =~ /^custom\.$groupType/ ) ) {
 			push( @groupProperties, $key );
 		}
@@ -555,7 +572,7 @@ sub propertiesGetGroup ( $\@ ) {
 			push( @groupProperties, $key );
 		}
 
-		if ( $groupType eq 'host-services' and ( $key =~ /^service\.[^\.]+\.(apparmor|firewall|ntp|pam\.ldap|selinux|snmp|sshd|syslog|xserver|md|iscsi|multipath)\./ or $key =~ /^host\.locale\./ or $key =~ /^sios\.automation\./ or $key =~ /^custom\.$groupType/ ) ) {
+		if ( $groupType eq 'host-services' and ( $key =~ /^service\.[^\.]+\.(apparmor|firewall|ntp|pam\.ldap|selinux|snmp|sshd|syslog|xserver|md|iscsi|multipath)\./ or $key =~ /^host\.(locale|time)\./ or $key =~ /^sios\.automation\./ or $key =~ /^custom\.$groupType/ ) ) {
 			push( @groupProperties, $key );
 		}
 
@@ -578,10 +595,15 @@ sub propertiesApplied ( $\%) {
 	my $appliedType = shift;
 	my $options     = shift;
 
+	#If no type(group) then process the properties regardless of any previous settings
 	return 0 if ( !$appliedType );
+	
+	# If asked not to apply any properties
+	return 1 if ( exists $options->{ovf}{current}{'fvorge.disabled'} and $options->{ovf}{current}{'fvorge.disabled'} );
 
 	propertiesGetPrevious( $appliedType, %{$options} );
-
+	
+	# If no previous then apply any current changes
 	return 0 if ( !exists $options->{ovf}{previous} or !defined $options->{ovf}{previous} );
 
 	my @printedCurrentProperties;
