@@ -57,7 +57,6 @@ sub apply ( $$\% ) {
 		my $customPriority = lc( $options{ovf}{current}{$property}{$num}{priority} );
 		my $customAction   = $options{ovf}{current}{$property}{$num}{'action'};
 		my $expect         = $options{ovf}{current}{$property}{$num}{'expect'};
-		my $always         = $options{ovf}{current}{$property}{$num}{'always'};
 
 		( Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority ::SKIP:: OVF priority NOT DEFINED} )         and next ) if ( !defined $customPriority );
 		( Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority ::SKIP:: OVF priority NOT $priorityExpect} ) and next ) if ( $customPriority !~ /^($priorityExpect)$/ );
@@ -65,7 +64,7 @@ sub apply ( $$\% ) {
 
 		if ( $customPriority eq $priority ) {
 
-			if ( !exists $options{ovf}{previous} || $always) {
+			if ( !exists $options{ovf}{previous} ) {
 				Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction ...} );
 				OVF::Manage::Tasks::runExpect( $expect, $customAction, %options );
 			} elsif ( exists $options{ovf}{previous}{$property}{$num} ) {
