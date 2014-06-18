@@ -463,7 +463,6 @@ sub parseOvfProperties ( \@ ) {
 	}
 
 	if ( %ovfPropertyCollection ) {
-		dbg_hash('Parsed Properties', \%ovfPropertyCollection);
 		return \%ovfPropertyCollection;
 	} else {
 		return {};
@@ -546,6 +545,7 @@ sub propertiesGetPrevious ( $\% ) {
 	if ( -e $previousPath ) {
 		tie @previousOvfProperties, 'Tie::File', $previousPath, autochomp => 1 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't open $previousPath ($?:$!)} );
 		$options->{ovf}{previous} = parseOvfProperties( @previousOvfProperties );
+		dbg_hash('Previous Properties', $options->{ovf}{previous});
 	} else {
 
 		# 'previous' may have been set from previous groups, like 'network' so clear out since not previous settings for this current group.
@@ -563,7 +563,6 @@ sub propertiesGetGroup ( $\@ ) {
 	my @groupProperties;
 
 	foreach my $key ( @{$printedOptions} ) {
-
 		if ( $groupType eq 'network' and ( $key =~ /^(host|network)\./ or $key =~ /^custom\.$groupType/ ) ) {
 			push( @groupProperties, $key );
 		}
