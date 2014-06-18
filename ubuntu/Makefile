@@ -9,7 +9,7 @@ REPO = $(shell echo $${REPO:-/data/repo})
 OFFICIAL_VERSION_FILE = /var/lib/jenkins/jobs/$(JOB)/workspace/ubuntu/version
 OFFICIAL_VERSION = $(shell cat $(OFFICIAL_VERSION_FILE))
 
-.PHONY: clean pkgprep
+.PHONY: clean prep
 
 all: repotgt
 
@@ -45,7 +45,7 @@ modversion: bumpversion
 	v=`cat version` ; \
 	sed "s/%VERSION%/$$v/g" < $(TARGET)/DEBIAN/control.in > $(TARGET)/DEBIAN/control
 
-pkgprep:
+prep:
 	[ -x pkgprep ] && ./pkgprep $(TARGET)
 
 package: pkgprep modversion
