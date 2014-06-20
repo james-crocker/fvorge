@@ -138,6 +138,7 @@ sub decodeURL ( $ ) {
 	my $item = shift;
 
 	#		"		&quot;
+	#		'		&apos;
 	#		<		&lt;
 	#		>		&gt;
 	#		&		&amp;
@@ -149,6 +150,7 @@ sub decodeURL ( $ ) {
 	$item =~ s/\%3B\%3B/\;\;/g;
 	$item =~ s/\%3D/\=/g;
 	$item =~ s/\&quot;/\"/g;
+	$item =~ s/\&apos;/\'/g;
 	$item =~ s/\&lt;/\</g;
 	$item =~ s/\&gt;/\>/g;
 	$item =~ s/\&amp;/\&/g;
