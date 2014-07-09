@@ -37,6 +37,16 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 ## For surpressing stdout, stderr.
 my $quietCmd = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd};
 
+sub netEmpty ( \$ ) {
+	my $value = ${ ( shift ) };
+	# Consider a value that is nothing but spaces empty as well.
+	if ( !defined $value or $value eq '' or $value =~ /^\s*$/ ) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 sub apply ( \% ) {
 
 	my %options = %{ ( shift ) };
@@ -67,7 +77,6 @@ sub apply ( \% ) {
 	}
 }
 
-
 sub create ( \% ) {
 
 	my %options = %{ ( shift ) };
@@ -97,26 +106,25 @@ sub create ( \% ) {
 	my $requiredEnabled = [];
 	return if ( OVF::State::checkRequired( $action, $required, '', $requiredEnabled, %options ) );
 
-	my $resolvSearch = $currentOvf{'network.resolv.search'} if ( defined $currentOvf{'network.resolv.search'} );
-
-	my $resolvNames = $currentOvf{'network.resolv.nameservers'} if ( defined $currentOvf{'network.resolv.nameservers'} );
-
-	my $ipv4Gateway = $currentOvf{'network.gateway.ipv4'} if ( defined $currentOvf{'network.gateway.ipv4'} );
-
-	my $ipv6Gateway = $currentOvf{'network.gateway.ipv6'} if ( defined $currentOvf{'network.gateway.ipv6'} );
-
-	my $hostName = $currentOvf{'network.hostname'} if ( defined $currentOvf{'network.hostname'} );
-
-	my $domainName = $currentOvf{'network.domain'} if ( defined $currentOvf{'network.domain'} );
-
 	# Markup the resolv files (Ubuntu will have search and nameservers in the interface file configs)
-	my $search = join( ' ', split( /,/, $resolvSearch ) ) if ( defined $resolvSearch );
-	my @nameservers = split( /,/, $resolvNames ) if ( defined $resolvNames );
+	my $resolvSearch = join( ' ', split( /,/, $currentOvf{'network.resolv.search'} ) ) if ( !netEmpty( $currentOvf{'network.resolv.search'} ) );
+
+	my $resolvNames = $currentOvf{'network.resolv.nameservers'} if ( !netEmpty( $currentOvf{'network.resolv.nameservers'} ) );
+
+	my $ipv4Gateway = $currentOvf{'network.gateway.ipv4'} if ( !netEmpty( $currentOvf{'network.gateway.ipv4'} ) );
+
+	my $ipv6Gateway = $currentOvf{'network.gateway.ipv6'} if ( !netEmpty( $currentOvf{'network.gateway.ipv6'} ) );
+
+	my $hostName = $currentOvf{'network.hostname'} if ( !netEmpty( $currentOvf{'network.hostname'} ) );
+
+	my $domainName = $currentOvf{'network.domain'} if ( !netEmpty( $currentOvf{'network.domain'} ) );
+
+	my @nameservers = split( /,/, $resolvNames ) if ( $resolvNames );
 
 	if ( %resolvTemplate and $distro ne 'Ubuntu' ) {
 
-		$resolvTemplate{apply}{1}{content} .= q{domain } . $domainName . qq{\n};
-		$resolvTemplate{apply}{1}{content} .= qq{search $search\n};
+		$resolvTemplate{apply}{1}{content} .= q{domain } . $domainName . qq{\n} if ( $domainName );
+		$resolvTemplate{apply}{1}{content} .= qq{search $resolvSearch\n} if ( $resolvSearch );
 		foreach my $nameserver ( @nameservers ) {
 			$resolvTemplate{apply}{1}{content} .= qq{nameserver $nameserver\n};
 		}
@@ -155,7 +163,7 @@ sub create ( \% ) {
 		my %routesTemplate = %{ Storable::dclone( $networkVars{files}{routes} ) };
 		my $routes;
 		$routes .= qq{default $ipv4Gateway - -\n} if ( $ipv4Gateway );
-		$routes .= qq{default $ipv6Gateway - -\n} if ( $ipv6Gateway ne '' );
+		$routes .= qq{default $ipv6Gateway - -\n} if ( $ipv6Gateway );
 		$routesTemplate{apply}{1}{content} = $routes;
 		$generatedFiles{routes} = \%routesTemplate;
 	}
@@ -271,9 +279,9 @@ sub create ( \% ) {
 					if ( $ipv4Bootproto eq 'static' and $ipv4 and $ipv4Prefix ) {
 						$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
 						if ( !$gatewaySetIpv4 ) {
-							$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
-							$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
-							$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n} if ( $ipv4Gateway );
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n} if ( @nameservers );
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-search $resolvSearch\n} if ( $resolvSearch );
 							$gatewaySetIpv4 = 1;
 						}
 					}
@@ -287,9 +295,9 @@ sub create ( \% ) {
 					if ( ( $ipv6Bootproto eq 'static' ) and $ipv6 and $ipv6Prefix ) {
 						$ifTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
 						if ( !$gatewaySetIpv6 ) {
-							$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
-							$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
-							$ifTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$ifTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n} if ( $ipv6Gateway );
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n} if ( @nameservers );
+							$ifTemplate{apply}{1}{content} .= qq{\tdns-search $resolvSearch\n} if ( $resolvSearch );
 							$gatewaySetIpv6 = 1;
 						}
 					}
@@ -547,9 +555,9 @@ sub create ( \% ) {
 					if ( $ipv4Bootproto eq 'static' and $ipv4 and $ipv4Prefix ) {
 						$ifBondTemplate{apply}{1}{content} .= qq{\taddress $ipv4/$ipv4Prefix\n};
 						if ( !$gatewaySetIpv4 ) {
-							$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n};
-							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
-							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv4Gateway\n} if ( $ipv4Gateway );
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n}  if ( @nameservers );
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-search $resolvSearch\n} if ( $resolvSearch );
 							$gatewaySetIpv4 = 1;
 						}
 					}
@@ -561,9 +569,9 @@ sub create ( \% ) {
 					if ( $ipv6Bootproto eq 'static' and $ipv6 and $ipv6Prefix ) {
 						$ifBondTemplate{apply}{1}{content} .= qq{\taddress $ipv6/$ipv6Prefix\n};
 						if ( !$gatewaySetIpv6 ) {
-							$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n};
-							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n};
-							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-search $search\n};
+							$ifBondTemplate{apply}{1}{content} .= qq{\tgateway $ipv6Gateway\n} if ( $ipv6Gateway );
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-nameservers } . join( ' ', @nameservers ) . qq{\n} if ( @nameservers );
+							$ifBondTemplate{apply}{1}{content} .= qq{\tdns-search $resolvSearch\n} if ( $resolvSearch );
 							$gatewaySetIpv6 = 1;
 						}
 					}
