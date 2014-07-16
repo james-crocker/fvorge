@@ -48,7 +48,7 @@ modversion: bumpversion
 prep:
 	[ -x pkgprep ] && ./pkgprep $(TARGET)
 
-package: pkgprep modversion
+package: prep modversion
 	dpkg-deb --build $(TARGET)
 
 sign: package
