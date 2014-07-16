@@ -1,6 +1,6 @@
 cd /opt/fvorge/sbin
 ln -s fvorge-lite.pl fvorge
-chmod 750 /opt/fvorge
-chown -R root.tomcat7 /opt/fvorge
+chmod 755 /opt/fvorge
+chown -R root.root /opt/fvorge
 cp /opt/fvorge/etc/init.d/fvorge.sh /etc/init.d/fvorge
 update-rc.d fvorge defaults
