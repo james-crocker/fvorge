@@ -1,2 +1,1 @@
 update-rc.d -f fvorge remove
-rm /etc/init.d/fvorge
