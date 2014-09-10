@@ -19,6 +19,7 @@ package OVF::Network::Vars;
 
 use strict;
 use warnings;
+use Storable;
 
 our %network;
 my %common;
@@ -504,7 +505,7 @@ iface lo inet loopback}
 # SLES 11 is using the newer syntax matching RHEL 6.x but the path is still different
 # Repeat for multiple aliases
 
-$network{'RHEL'}{5}{9}{'x86_64'} = $common{'RHEL'};
+$network{'RHEL'}{5}{9}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 delete( $network{'RHEL'}{5}{9}{'x86_64'}{files}{persistent} );
 $network{'RHEL'}{5}{9}{'x86_64'}{files}{hostname}{apply}{1}{content} .= qq{\nNETWORKING_IPV6=yes};
 
@@ -514,7 +515,7 @@ $network{'RHEL'}{6}{2}{'x86_64'} = $common{'RHEL'};
 $network{'RHEL'}{6}{3}{'x86_64'} = $common{'RHEL'};
 $network{'RHEL'}{6}{4}{'x86_64'} = $common{'RHEL'};
 
-$network{'CentOS'}{5}{9}{'x86_64'} = $common{'RHEL'};
+$network{'CentOS'}{5}{9}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 delete( $network{'CentOS'}{5}{9}{'x86_64'}{files}{persistent} );
 $network{'CentOS'}{5}{9}{'x86_64'}{files}{hostname}{apply}{1}{content} .= qq{\nNETWORKING_IPV6=yes};
 
@@ -531,8 +532,7 @@ $network{'SLES'}{10}{4}{'x86_64'} = $common{'SLES'}{10};
 $network{'SLES'}{11}{1}{'x86_64'} = $common{'SLES'};
 $network{'SLES'}{11}{2}{'x86_64'} = $common{'SLES'};
 
-$network{'Ubuntu'}{'13'}{'10'}{'x86_64'} = $common{'Ubuntu'};
-$network{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
+$network{'Ubuntu'}{'13'}{'10'}{'x86_64'} = Storable::dclone( $common{'Ubuntu'} );
 # HACK: due to a bug in 13.10, interfaces.d files are not read by ifup/down
 # so put the if config in /etc/network/interfaces
 $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'apply'}{'0'} = $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'interfaces'}{'apply'}{'1'};
@@ -541,5 +541,7 @@ $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'path'} = '/etc/network/
 delete $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'apply'}{'1'}{'replace'};
 $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'if'}{'apply'}{'1'}{'tail'} = 1;
 delete $network{'Ubuntu'}{'13'}{'10'}{'x86_64'}{'files'}{'persistent'};
+
+$network{'Ubuntu'}{'14'}{'04'}{'x86_64'} = $common{'Ubuntu'};
 
 1;
