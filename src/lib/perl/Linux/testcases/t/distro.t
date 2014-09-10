@@ -12,9 +12,9 @@ use Distribution;
 # note: if not building on ubuntu, just skip this for now...
 open(LSB, "< /etc/lsb-release") or die('no /etc/lsb-release');
 if (grep /Ubuntu/, <LSB>) {
-	# note: we build on ubuntu 13.10, if this changes, then change this...
+	# note: we build on ubuntu 14.04, if this changes, then change this...
 	is(Linux::Distribution::distribution_name(), 'ubuntu', 'the distro name should be ubuntu');
-	is(Linux::Distribution::distribution_version(), '13.10', 'the distro version is 13.10');
+	is(Linux::Distribution::distribution_version(), '14.04', 'the distro version is 14.04');
 } else {
 	pass('not testing distro');
 	pass('not testing distro');
