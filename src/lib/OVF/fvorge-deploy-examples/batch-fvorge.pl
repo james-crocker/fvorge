@@ -17,227 +17,298 @@
 # You should have received a copy of the GNU General Public License
 # along with FVORGE.  If not, see <http://www.gnu.org/licenses/>.
 
-use lib "../libs";
+BEGIN { 
+	@INC = ( "/opt/fvorge/lib/perl", "../../../lib/perl", @INC );
+	# To allow https connections with unverified SSL certs.
+	# From VMware: https://communities.vmware.com/message/2444510
+	$ENV{PERL_NET_HTTPS_SSL_SOCKET_CLASS} = "Net::SSL";
+	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+}
+
 use POSIX;
 use strict;
-use warnings;
-use ConfigFile;
+#use warnings;
+use Config::File;
+use File::Basename;
+
+use OVF::Automation::Module;
+
+my $ovfManagePath = '/opt/fvorge/bin/fvorge-manage.pl';
+
+my $powerActions = q{poweroff|poweron|reset|shutdown|reboot};
+my $batchActions = qq{deploy|destroy|snapshot|$powerActions};
 
 sub usage() {
-	printf STDERR "\nUsage: %s <my_batch.cf> deploy|destroy\n", basename( $0 );
+	printf STDERR "\nUsage: %s <my_batch.cf> $batchActions bg\n", basename( $0 );
 	exit 1;
 }
 
-my $config      = $ARGV[ 0 ];
-my $ovfAction   = '';
+my $config        = defined($ARGV[ 0 ]) ? $ARGV[ 0 ] : undef;
+my $ovfAction     = defined($ARGV[ 1 ]) ? $ARGV[ 1 ] : undef;
+my $ovfBackground = defined($ARGV[ 2 ]) ? $ARGV[ 2 ] : undef;
 
-if ( ! -e $config or $ovfAction eq '' ) {
+if ( ( !defined $config and ! -e $config ) or $ovfAction !~ /($batchActions)/ ) {
 	usage();
 }
 
-if ( $ovfAction eq 'destroy' ) {
-	ovfDestroy();
-} else {
-	ovfDestroy();
-	ovfDeploy();
-}
-
-my $vars = ConfigFile::Parse( $config );    # parse the user's batch config
+my $vars = Config::File::read_config_file( $config );    # parse the user's batch config
 
 if ( !defined $vars ) {
 	print STDERR "\nError: Failed to read settings from config file \"$config\"\n";
 	usage();
 }
 
-my $settings = ConfigFile::Settings( $vars );
-my @systems = ConfigFile::Setting( $settings, 'systems' );
-my $systems = join '-', @systems;
-my $variables_file = ConfigFile::Setting( $settings, 'variables_file' );
+my ( $nameRef, $instanceRef, $targethostRef, $targetdatastoreRef, $vcenterRef, $vcenteruserRef, $vcenterpasswordRef, $proppathRef, $datacenterRef, $sourceovfRef, $diskmodeRef, $folderRef, $clusterRef, $distributionRef, $majorRef, $minorRef, $architectureRef, $groupRef) = ovfCheckArgs();
+
+my @name            = @{ $nameRef };
+my @instance        = @{ $instanceRef };
+my @targethost      = @{ $targethostRef };
+my @targetdatastore = @{ $targetdatastoreRef };
+my @vcenter         = @{ $vcenterRef };
+my @vcenteruser     = @{ $vcenteruserRef };
+my @vcenterpassword = @{ $vcenterpasswordRef };
+my @proppath        = @{ $proppathRef };
+my @datacenter      = @{ $datacenterRef };
+my @sourceovf       = @{ $sourceovfRef };
+my @diskmode        = @{ $diskmodeRef };
+my @folder          = @{ $folderRef };
+my @cluster         = @{ $clusterRef };
+my @distribution    = @{ $distributionRef };
+my @major           = @{ $majorRef };
+my @minor           = @{ $minorRef };
+my @architecture    = @{ $architectureRef };
+my @group           = @{ $groupRef };
+	
+if ( $ovfAction eq 'destroy' ) {
+	ovfDestroy();
+} elsif ( $ovfAction =~ /($powerActions)/ ) {
+	ovfPower( $ovfAction );
+} elsif ( $ovfAction eq 'deploy' ) {
+	ovfDeploy();
+} elsif ( $ovfAction eq 'snapshot' ) {
+	ovfSnapshot();
+}
+
+sub getBulkArguments( $ ) {
+	
+	my $vmCount = shift;
+	
+	my $args = qq{ \\\n--distribution="$distribution[ $vmCount ]" \\
+--major="$major[ $vmCount ]" \\
+--minor="$minor[ $vmCount ]" \\
+--architecture="$architecture[ $vmCount ]" \\
+--group="$group[ $vmCount ]" \\
+--instance="$instance[ $vmCount ]" \\
+--vmname="$name[ $vmCount ]" \\
+--targethost="$targethost[ $vmCount ]" \\
+--targetdatastore="$targetdatastore[ $vmCount ]" \\
+--vcenter="$vcenter[ $vmCount ]" \\
+--vcenteruser="$vcenteruser[ $vmCount ]" \\
+--vcenterpassword="$vcenterpassword[ $vmCount ]" \\
+--datacenter="$datacenter[ $vmCount ]" \\
+--sourceovf="$sourceovf[ $vmCount ]" \\
+--diskmode="$diskmode[ $vmCount ]"};
+
+	if ( defined $cluster[ $vmCount ] and $cluster[ $vmCount ] ne 'null' ) {
+		$args .= qq{ \\\n--cluster="$cluster[ $vmCount ]"};
+	}
+
+	if ( defined $folder[ $vmCount ] and $folder[ $vmCount ] ne 'null' ) {
+		$args .= qq{ \\\n--folder="$folder[ $vmCount ]"};
+	}
+
+	if ( defined $proppath[ $vmCount ] and $proppath[ $vmCount ] ne 'null' ) {
+		$args .= qq{ \\\n--propoverride \\\n--proppath="$proppath[ $vmCount ]"};
+	}
+	
+	return $args;
+	
+}
+
+sub getCommand( $$ ) {
+	
+	my $action = shift;
+	my $vmCount = shift;
+	
+	my $cmd = $ovfManagePath;
+	$cmd .= qq{ \\\n--action="$action"};
+	if ( $action eq 'snapshot' ) {
+		# Default to snapshot with Memory and Quiesce TRUE
+		$cmd .= qq{ \\\n--snapshotmemory \\\n--snapshotquiesce}
+	}
+	$cmd .= getBulkArguments( $vmCount );
+	# Caution - must have previously authenticated otherwise loops waiting for input
+	$cmd .= q{ &} if ( defined $ovfBackground );
+	
+	return $cmd;
+
+}
 
 sub ovfDeploy () {
-
-	my ( $systemsRef, $instancesRef, $targethostsRef, $targetdatastoresRef, $distribution, $major, $minor, $architecture, $group, $ovfBaseActionCmd ) = ovfCheckArgs();
-
-	my @systems          = @{$systemsRef};
-	my @instances        = @{$instancesRef};
-	my @targethosts      = @{$targethostsRef};
-	my @targetdatastores = @{$targetdatastoresRef};
-
-	my @useError;
-
+	
 	my $vmCount = 0;
-	foreach my $system ( @systems ) {
-		print "Deploying OVF Virtual Appliance $system ...\n";
-		my $cmd = $ovfBaseActionCmd . ' --action=deploy --propoverride --instance="' . $instances[ $vmCount ] . '" --targethost="' . $targethosts[ $vmCount ] . '" --targetdatastore="' . $targetdatastores[ $vmCount ] . '"';
-		print "$cmd\n";
-		system( $cmd ) == 0 or ( push( @useError, "Could not deploy OVF Virtual Appliance $system\n" ) );
+	foreach my $name ( @name ) {
+		print "Deploying $name ...\n";
+		my $cmd = getCommand( 'deploy', $vmCount );
+		#print "DEPLOY $cmd\n";
+		system( $cmd ) == 0 or ( print STDERR "Could not deploy $name\n" );
 		$vmCount++;
 	}
-
-	if ( @useError ) {
-		foreach my $err ( @useError ) {
-			print STDERR "$err";
-		}
-		exit 5;
-	}
-
-	# Attach ISO
-	$vmCount  = 0;
-	@useError = ();
-	foreach my $system ( @systems ) {
-		print "Attaching ISO for OVF Virtual Appliance $system ...\n";
-		my $cmd = $ovfBaseActionCmd . ' --action=attach --instance=' . $instances[ $vmCount ] . ' --vmdevice=iso';
-		print "$cmd\n";
-		system( $cmd ) == 0 or ( push( @useError, "Could not attach ISO to OVF Virtual Appliance $system\n" ) );
-		$vmCount++;
-	}
-
-	if ( @useError ) {
-		foreach my $err ( @useError ) {
-			print STDERR "$err";
-		}
-		exit 5;
-	}
-
-	# Poweron the VM
-	$vmCount  = 0;
-	@useError = ();
-	foreach my $system ( @systems ) {
-		print "Powering on for OVF Virtual Appliance $system ...\n";
-		my $cmd = $ovfBaseActionCmd . ' --action=poweron --instance=' . $instances[ $vmCount ];
-		print "$cmd\n";
-		system( $cmd ) == 0 or ( push( @useError, "Could not poweron OVF Virtual Appliance $system\n" ) );
-		$vmCount++;
-	}
-
-	if ( @useError ) {
-		foreach my $err ( @useError ) {
-			print STDERR "$err";
-		}
-		exit 5;
-	}
-
-	# ALLOW THE VM TO CONFIGURE ITSELF BEFORE PROCEEDING
-	# SHOULD HAVE SOMETHING MORE CLEVER THAN A TIMEOUT
-	print "Sleeping 10 min. while the OVF Virtual Appliances configure themselves ...\n";
-	sleep 600;
-
+	
 }
 
 sub ovfDestroy () {
 
-	my ( $systemsRef, $instancesRef, $targethostsRef, $targetdatastoresRef, $distribution, $major, $minor, $architecture, $group, $ovfBaseActionCmd ) = ovfCheckArgs();
-
-	my @systems          = @{$systemsRef};
-	my @instances        = @{$instancesRef};
-	my @targethosts      = @{$targethostsRef};
-	my @targetdatastores = @{$targetdatastoresRef};
-
-	my @useError;
-
-	# Since all tests passed - destroy the VM
-	# Poweroff the VM
 	my $vmCount = 0;
-	foreach my $system ( @systems ) {
-		print "Powering off for OVF Virtual Appliance $system ...\n";
-		my $cmd = $ovfBaseActionCmd . ' --action=poweroff --instance=' . $instances[ $vmCount ];
-		print "$cmd\n";
-		system( $cmd ) == 0 or ( push( @useError, "Could not poweroff OVF Virtual Appliance $system\n" ) );
+	foreach my $name ( @name ) {
+		print "Destroying $name ...\n";
+		my $cmd = getCommand( 'destroy', $vmCount );
+		#print "DESTROY $cmd\n";
+		system( $cmd ) == 0 or ( print STDERR "Could not destroy $name\n" );
 		$vmCount++;
 	}
 
-	if ( @useError ) {
-		foreach my $err ( @useError ) {
-			print STDERR "$err";
-		}
-		exit 5;
-	}
+}
 
-	$vmCount  = 0;
-	@useError = ();
-	foreach my $system ( @systems ) {
-		print "Destroying OVF Virtual Appliance $system ...\n";
-		my $cmd = $ovfBaseActionCmd . ' --action=destroy --instance=' . $instances[ $vmCount ];
-		print "$cmd\n";
-		system( $cmd ) == 0 or ( push( @useError, "Could not destroy OVF Virtual Appliance $system\n" ) );
+sub ovfPower ( $ ) {
+
+	my $powerAction = shift;
+	my $vmCount = 0;
+	foreach my $name ( @name ) {
+		print "Power " . uc($powerAction) . " $name ...\n";
+		my $cmd = getCommand( $powerAction, $vmCount );
+		#print "POWER $powerAction $cmd\n";
+		system( $cmd ) == 0 or ( print STDERR "Could not $powerAction $name\n" );
 		$vmCount++;
 	}
+	
+}
 
-	if ( @useError ) {
-		foreach my $err ( @useError ) {
-			print STDERR "$err";
-		}
-		exit 5;
+sub ovfSnapshot () {
+
+	# snapshot will affect vm in any state, eg. powered on|off
+	# snapshot will default to quiesce and memory TRUE
+	# snapshot will be named and described with defaults
+	my $vmCount = 0;
+	foreach my $name ( @name ) {
+		print "Snapshot $name ...\n";
+		my $cmd = getCommand( 'snapshot', $vmCount );
+		#print "SNAPSHOT $cmd\n";
+		system( $cmd ) == 0 or ( print STDERR "Could not snapshot $name\n" );
+		$vmCount++;
 	}
-
+	
 }
 
 sub ovfCheckArgs () {
 
 	my @useError;
+	my $vmName;
 
-	my $distroRegex      = q{RHEL|CentOS|ORAL|SLES};
+	my $distroRegex      = q{RHEL|CentOS|ORAL|SLES|Ubuntu};
 	my $archRegex        = q{x86_64|i686};
 	my $rhelVersionRegex = q{5\.9|6\.0|6\.1|6\.2|6\.3|6\.4};
 	my $slesVersionRegex = q{10\.4|11\.1|11\.2};
+	my $ubuntuVersionRegex = q{14\.04|14\.10};
 
 	# Get and check args for OVF deployment
-	my @systems          = ConfigFile::Setting( $settings, 'systems' );
-	my @instances        = ConfigFile::Setting( $settings, 'instances' );
-	my @targethosts      = ConfigFile::Setting( $settings, 'targethosts' );
-	my @targetdatastores = ConfigFile::Setting( $settings, 'targetdatastores' );
+	my @name             = split(/,\s*/, $vars->{'name'} );
+	my @distribution     = split(/,\s*/, $vars->{'distribution'} );
+	my @major            = split(/,\s*/, $vars->{'major'} );
+	my @minor            = split(/,\s*/, $vars->{'minor'} );
+	my @architecture     = split(/,\s*/, $vars->{'architecture'} );
+	my @group            = split(/,\s*/, $vars->{'group'} );
+	my @instance         = split(/,\s*/, $vars->{'instance'} );
+	my @targethost       = split(/,\s*/, $vars->{'targethost'} );
+	my @targetdatastore  = split(/,\s*/, $vars->{'targetdatastore'} );
+	my @vcenter          = split(/,\s*/, $vars->{'vcenter'} );
+	my @vcenteruser      = split(/,\s*/, $vars->{'vcenteruser'} );
+	my @vcenterpassword  = split(/,\s*/, $vars->{'vcenterpassword'} );
+	my @proppath         = split(/,\s*/, $vars->{'proppath'} );
+	my @datacenter       = split(/,\s*/, $vars->{'datacenter'} );
+	my @sourceovf        = split(/,\s*/, $vars->{'sourceovf'} );
+	my @diskmode         = split(/,\s*/, $vars->{'diskmode'} );
+	my @cluster          = split(/,\s*/, $vars->{'cluster'} );
+	my @folder           = split(/,\s*/, $vars->{'folder'} );
 
-	my $distribution = ConfigFile::Setting( $settings, 'distribution' );
-	my $major        = ConfigFile::Setting( $settings, 'major' );
-	my $minor        = ConfigFile::Setting( $settings, 'minor' );
-	my $architecture = ConfigFile::Setting( $settings, 'architecture' );
-	my $group        = ConfigFile::Setting( $settings, 'group' );
+	if ( scalar( @name ) != scalar( @distribution ) ) {
+		push( @useError, "Number of distribution doesn't match the number of name\n" );
+	}
+	
+	if ( scalar( @name ) != scalar( @major ) ) {
+		push( @useError, "Number of major doesn't match the number of name\n" );
+	}
+	
+	if ( scalar( @name ) != scalar( @minor ) ) {
+		push( @useError, "Number of minor doesn't match the number of name\n" );
+	}
+	
+	if ( scalar( @name ) != scalar( @architecture ) ) {
+		push( @useError, "Number of architrecture doesn't match the number of name\n" );
+	}
+	
+	if ( scalar( @name ) != scalar( @group ) ) {
+		push( @useError, "Number of group doesn't match the number of name\n" );
+	}	
+	
+	if ( scalar( @name ) != scalar( @instance ) ) {
+		push( @useError, "Number of instance doesn't match the number of name\n" );
+	}	
 
-	if ( scalar( @systems ) != scalar( @instances ) ) {
-		push( @useError, "Number of instances doesn't match the number of systems\n" );
+	if ( scalar( @name ) != scalar( @targethost ) ) {
+		push( @useError, "Number of targethost doesn't match the number of name\n" );
 	}
 
-	if ( scalar( @systems ) != scalar( @targethosts ) ) {
-		push( @useError, "Number of targethosts doesn't match the number of systems\n" );
+	if ( scalar( @name ) != scalar( @targetdatastore ) ) {
+		push( @useError, "Number of targetdatastore doesn't match the number of name\n" );
+	}
+	
+	if ( scalar( @name ) != scalar( @vcenter ) ) {
+		push( @useError, "Number of vcenter doesn't match the number of name\n" );
 	}
 
-	if ( scalar( @systems ) != scalar( @targetdatastores ) ) {
-		push( @useError, "Number of targetdatastores doesn't match the number of systems\n" );
+	if ( scalar( @name ) != scalar( @vcenteruser ) ) {
+		push( @useError, "Number of vcenteruser doesn't match the number of name\n" );
 	}
-
-	if ( !defined $distribution or $distribution !~ /^($distroRegex)$/ ) {
-		push( @useError, "distribution $distroRegex required\n" );
+	
+	if ( scalar( @name ) != scalar( @vcenterpassword ) ) {
+		push( @useError, "Number of vcenterpassword doesn't match the number of name\n" );
 	}
-
-	if ( !defined $major or $major !~ /^\d+$/ ) {
-		push( @useError, "major # required\n" );
+	
+	if ( scalar( @name ) != scalar( @proppath ) ) {
+		push( @useError, "Number of proppath doesn't match the number of name\n" );
 	}
-
-	if ( !defined $minor or $minor !~ /^\d+$/ ) {
-		push( @useError, "minor # required\n" );
+	
+	if ( scalar( @name ) != scalar( @datacenter ) ) {
+		push( @useError, "Number of datacenter doesn't match the number of name\n" );
 	}
-
-	if ( !defined $architecture or $architecture !~ /^($archRegex)$/ ) {
-		push( @useError, "architecture $archRegex required\n" );
+	
+	if ( scalar( @name ) != scalar( @sourceovf ) ) {
+		push( @useError, "Number of sourceovf doesn't match the number of name\n" );
 	}
-
-	my $version = qq{$major.$minor};
-	if ( $distribution eq 'SLES' and $version !~ /^($slesVersionRegex)$/ ) {
-		push( @useError, "SLES accepted versions $slesVersionRegex required\n" );
+	
+	if ( scalar( @name ) != scalar( @diskmode ) ) {
+		push( @useError, "Number of diskmode doesn't match the number of name\n" );
 	}
-
-	if ( $distribution ne 'SLES' and $version !~ /^($rhelVersionRegex)$/ ) {
-		push( @useError, "$distribution accepted versions $rhelVersionRegex required\n" );
+	
+	if ( scalar( @name ) != scalar( @cluster ) ) {
+		push( @useError, "Number of cluster doesn't match the number of name\n" );
 	}
-
-	if ( !defined $group or $group !~ /^\d{1,3}$/ ) {
-		push( @useError, "group ### required\n" );
+	
+	if ( scalar( @name ) != scalar( @folder ) ) {
+		push( @useError, "Number of folder doesn't match the number of name\n" );
 	}
-
-	foreach my $instance ( @instances ) {
-		if ( !defined $instance or $instance !~ /^\d{1,2}$/ ) {
-			push( @useError, "instance # required\n" );
+	
+	# Create a vmname based on the name and other properties and validate arguments.
+	my $i = 0;
+	foreach my $name ( @name ) {	
+		my @valUseError = OVF::Automation::Module::validateArguments( $distribution[ $i ], $major[ $i ], $minor[ $i ], $architecture[ $i ], $group[ $i ], $instance[ $i ] );
+		push( @useError, @valUseError ) if ( @valUseError );
+		my %ovfKeys = OVF::Automation::Module::convertNames( $distribution[ $i ], $major[ $i ], $minor[ $i ], $architecture[ $i ], $group[ $i ], $instance[ $i ] );
+		if ( defined $ovfKeys{'vmname'} ) {
+			$name = $name . '-' . $ovfKeys{'vmname'};
 		}
+		$i++;
 	}
 
 	if ( @useError ) {
@@ -247,8 +318,6 @@ sub ovfCheckArgs () {
 		exit 5;
 	}
 
-	my $ovfBaseActionCmd = qq{/opt/fvorge/bin/fvorge-deploy --distribution="$distribution" --major="$major" --minor="$minor" --architecture="$architecture" --group="$group"};
-
-	return ( \@systems, \@instances, \@targethosts, \@targetdatastores, $distribution, $major, $minor, $architecture, $group, $ovfBaseActionCmd );
+	return ( \@name, \@instance, \@targethost, \@targetdatastore, \@vcenter, \@vcenteruser, \@vcenterpassword, \@proppath, \@datacenter, \@sourceovf, \@diskmode, \@folder, \@cluster, \@distribution, \@major, \@minor, \@architecture, \@group);
 
 }

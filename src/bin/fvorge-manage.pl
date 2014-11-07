@@ -52,7 +52,7 @@ my $instance;
 my $vcenterServer;
 my $vcenterUser;
 my $vcenterPassword;
-my $dataCenterName;
+my $dataCenter;
 my $sourceOvf;
 my $targetHost;
 my $targetDatastore;
@@ -66,6 +66,10 @@ my $propertiesOverride = 0;
 my $propertiesPath;
 my $snapshotName;
 my $snapshotDescription;
+my $snapshotMemory = 0;
+my $snapshotQuiesce = 0;
+my $vmFolder;
+my $cluster;
 my $quietRunning = 0;
 
 ## Getopts ----------------------------------------------
@@ -73,8 +77,8 @@ Getopt::Long::GetOptions(
 	'help|h'                   => \$help,
 	'action|a=s'               => \$action,
 	'distribution|distro=s'    => \$distribution,
-	'major|maj=i'              => \$major,
-	'minor|min=i'              => \$minor,
+	'major|maj=s'              => \$major,
+	'minor|min=s'              => \$minor,
 	'architecture|arch=s'      => \$architecture,
 	'group|g=i'                => \$group,
 	'instance|n=i'             => \$instance,
@@ -82,20 +86,24 @@ Getopt::Long::GetOptions(
 	'vcenter|vc=s'             => \$vcenterServer,
 	'vcenteruser|vcu=s'        => \$vcenterUser,
 	'vcenterpassword|vcp=s'    => \$vcenterPassword,
-	'datacenter|dc=s'          => \$dataCenterName,
+	'datacenter|dc=s'          => \$dataCenter,
 	'sourceovf|sovf=s'         => \$sourceOvf,
 	'targethost|thost=s'       => \$targetHost,
 	'targetdatastore|tds=s'    => \$targetDatastore,
 	'diskmode|dm=s'            => \$diskMode,
+	'folder|f=s'               => \$vmFolder,
+	'cluster|c=s'              => \$cluster,
 	'isodatastore|isod=s'      => \$isoDatastore,
 	'isopath|isop=s'           => \$isoPath,
 	'vmdevice|vd=s'            => \$vmDevice,
 	'vmdevicename|vdn=s'       => \$vmDeviceName,
 	'propoverride|po!'         => \$propertiesOverride,
 	'proppath|pp=s'            => \$propertiesPath,
-	'snapshotname|sn=s'        => \$snapshotName,
-	'snapshotdescription|sd=s' => \$snapshotDescription,
-	'quiet|q!' => \$quietRunning,
+	'snapshotname|sn:s'        => \$snapshotName,
+	'snapshotdescription|sd:s' => \$snapshotDescription,
+	'snapshotmemory|sm!'       => \$snapshotMemory,
+	'snapshotquiesce|sq!'      => \$snapshotQuiesce,
+	'quiet|q!'                 => \$quietRunning
 ) or pod2usage( 2 );
 
 pod2usage( 1 ) if $help;
@@ -105,92 +113,12 @@ pod2usage( 1 ) if $help;
 my $actionRegex   = $OVF::Automation::Vars::actionRegex;
 my $vmDeviceRegex = $OVF::Automation::Vars::vmDeviceRegex;
 
-my $distroRegex      = $OVF::Vars::Common::sysVars{distrosRegex};
-my $archRegex        = $OVF::Vars::Common::sysVars{archsRegex};
-my $rhelVersionRegex = $OVF::Vars::Common::sysVars{rhelVersionsRegex};
-my $slesVersionRegex = $OVF::Vars::Common::sysVars{slesVersionsRegex};
-
 if ( !defined $action or $action !~ /^($actionRegex)$/ ) {
 	push( @useError, "--action $actionRegex required\n" );
 }
 
-if ( !defined $distribution or $distribution !~ /^($distroRegex)$/ ) {
-	push( @useError, "--distribution $distroRegex required\n" );
-}
-
-if ( !defined $major or $major !~ /^\d+$/ ) {
-	push( @useError, "--major # required\n" );
-}
-
-if ( !defined $minor or $minor !~ /^\d+$/ ) {
-	push( @useError, "--minor # required\n" );
-}
-
-if ( !defined $architecture or $architecture !~ /^($archRegex)$/ ) {
-	push( @useError, "--architecture $archRegex required\n" );
-}
-
-if ( !defined $group or $group !~ /^\d{1,3}$/ ) {
-	push( @useError, "--group ### required\n" );
-}
-
-if ( !defined $instance or $instance !~ /^\d{1,2}$/ ) {
-	push( @useError, "--instance # required\n" );
-}
-
-# Essential items. Error here before continuing checks.
-pod2usage( @useError ) if @useError;
-
-my $version = qq{$major.$minor};
-if ( $distribution eq 'SLES' and $version !~ /^($slesVersionRegex)$/ ) {
-	push( @useError, "SLES accepted versions $slesVersionRegex required\n" );
-}
-
-if ( $distribution ne 'SLES' and $version !~ /^($rhelVersionRegex)$/ ) {
-	push( @useError, "$distribution accepted versions $rhelVersionRegex required\n" );
-}
-
-pod2usage( @useError ) if @useError;
-
-my %ovfKeys = OVF::Automation::Module::convertNames( $distribution, $major, $minor, $architecture, $group, $instance );
-if ( !defined $vmName and defined $ovfKeys{'vmname'} ) {
-	$vmName = $ovfKeys{'vmname'};
-}
-
-my %shortDefaultVars = %{ $OVF::Automation::Vars::automate{$distribution}{$major}{$minor}{$architecture}{'defaults'} };
-my %shortVars        = %{ $OVF::Automation::Vars::automate{$distribution}{$major}{$minor}{$architecture} };
-
-# Set defaults if none provided
-if ( !defined $diskMode and defined $shortDefaultVars{'diskmode'} ) {
-	$diskMode = $shortDefaultVars{'diskmode'};
-}
-if ( !defined $isoDatastore and defined $shortDefaultVars{'isodatastore'} ) {
-	$isoDatastore = $shortDefaultVars{'isodatastore'};
-}
-if ( !defined $isoPath and defined $shortVars{'iso'} ) {
-	$isoPath = $shortVars{'iso'};
-}
-if ( !defined $vcenterServer and defined $shortDefaultVars{'vcenterserver'} ) {
-	$vcenterServer = $shortDefaultVars{'vcenterserver'};
-}
-if ( !defined $vcenterUser and defined $shortDefaultVars{'vcenteruser'} ) {
-	$vcenterUser = $shortDefaultVars{'vcenteruser'};
-}
-if ( !defined $vcenterPassword and defined $shortDefaultVars{'vcenterpassword'} ) {
-	$vcenterPassword = $shortDefaultVars{'vcenterpassword'};
-}
-if ( !defined $dataCenterName and defined $shortDefaultVars{'datacentername'} ) {
-	$dataCenterName = $shortDefaultVars{'datacentername'};
-}
-if ( !defined $sourceOvf and defined $shortDefaultVars{'sourceovfbaseurl'} ) {
-	$sourceOvf = $shortDefaultVars{'sourceovfbaseurl'} . $ovfKeys{'sourceovf'};
-}
-if ( !defined $targetHost and defined $shortDefaultVars{'targethost'} ) {
-	$targetHost = $shortDefaultVars{'targethost'};
-}
-if ( !defined $targetDatastore and defined $shortDefaultVars{'targetdatastore'} ) {
-	$targetDatastore = $shortDefaultVars{'targetdatastore'};
-}
+my @valUseError = OVF::Automation::Module::validateArguments( $distribution, $major, $minor, $architecture, $group, $instance );
+push( @useError, @valUseError ) if ( @valUseError );
 
 if ( defined $action and $action =~ /^($actionRegex)$/ ) {
 
@@ -247,23 +175,34 @@ if ( defined $action and $action eq 'deploy' ) {
 		push( @useError, "--targetdatastore required\n" );
 	}
 
-	if ( !defined $dataCenterName ) {
+	if ( !defined $dataCenter ) {
 		push( @useError, "--datacenter required\n" );
 	}
+	
+	# cluster and vmFolder are optional
 
 }
 
-pod2usage( @useError ) if @useError;
+if ( @useError ) {
+	foreach my $err ( @useError ) {
+		print STDERR "$err";
+	}
+	pod2usage( @useError ) if @useError;
+	exit 5;
+}
+
+my %ovfKeys = OVF::Automation::Module::convertNames( $distribution, $major, $minor, $architecture, $group, $instance );
+if ( !defined $vmName and defined $ovfKeys{'vmname'} ) {
+	$vmName = $ovfKeys{'vmname'};
+}
 
 $options{action}              = $action;
 $options{distribution}        = $distribution;
-$options{distNum}             = $ovfKeys{'distribution'};
 $options{major}               = $major;
 $options{majNum}              = $ovfKeys{'major'};
 $options{minor}               = $minor;
 $options{minNum}              = $ovfKeys{'minor'};
 $options{architecture}        = $architecture;
-$options{archNum}             = $ovfKeys{'architecture'};
 $options{group}               = $group;
 $options{grpNum}              = $ovfKeys{'group'};
 $options{instance}            = $instance;
@@ -272,7 +211,9 @@ $options{vmname}              = $vmName;
 $options{vcenter}             = $vcenterServer;
 $options{vcenteruser}         = $vcenterUser;
 $options{vcenterpassword}     = $vcenterPassword;
-$options{datacenter}          = $dataCenterName;
+$options{datacenter}          = $dataCenter;
+$options{cluster}             = $cluster;
+$options{folder}              = $vmFolder;
 $options{sourceovf}           = $sourceOvf;
 $options{targethost}          = $targetHost;
 $options{targetdatastore}     = $targetDatastore;
@@ -285,7 +226,9 @@ $options{propoverride}        = $propertiesOverride;
 $options{proppath}            = $propertiesPath;
 $options{snapshotname}        = $snapshotName;
 $options{snapshotdescription} = $snapshotDescription;
-$options{quietrunning} = $quietRunning;
+$options{snapshotmemory}      = $snapshotMemory;
+$options{snapshotquiesce}     = $snapshotQuiesce;
+$options{quietrunning}        = $quietRunning;
 
 OVF::Automation::Module::deploy( %options )  if ( $action eq 'deploy' );
 OVF::Automation::Module::destroy( %options ) if ( $action eq 'destroy' );

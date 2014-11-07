@@ -47,10 +47,8 @@ sub deploy ( \% ) {
 	my $minor  = $options{'minor'};
 	my $arch   = $options{'architecture'};
 
-	my $distNum = $options{'distNum'};
 	my $majNum  = $options{'majNum'};
 	my $minNum  = $options{'minNum'};
-	my $archNum = $options{'archNum'};
 	my $grpNum  = $options{'grpNum'};
 	my $instNum = $options{'instNum'};
 
@@ -63,8 +61,9 @@ sub deploy ( \% ) {
 	my $vcUser          = $options{'vcenteruser'};
 	my $vcPass          = $options{'vcenterpassword'};
 	my $dataCenter      = $options{'datacenter'};
-
-	my $propPath = $options{'proppath'} if ( !exists $options{'proppath'} );
+	my $propPath        = $options{'proppath'};
+	my $vmFolder        = $options{'folder'};
+	my $cluster         = $options{'cluster'};
 
 	if ( !defined $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
@@ -72,43 +71,46 @@ sub deploy ( \% ) {
 	}
 
 	my $ovftool             = $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch}{'bin'}{'ovftool'}{'path'};
-	my $ovfPropertyRootPath = $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch}{'ovf-properties-root'}{'path'};
-
-	my @propertiesOverride;
 
 	if ( !-x $ovftool ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO executable ($ovftool) FOUND for $distro $major.$minor $arch} );
 		return;
 	}
 
-	my $distName        = $distNum . '-' . $majNum . '-' . $minNum . '-' . $archNum;
-	my $ovfPropertyPath = $ovfPropertyRootPath . '/' . $distName . '/' . $grpNum . '/' . $instNum;
-	my $vmFolder        = $distNum . '-' . $distro;
-
+	my @propertiesOverride;
 	if ( $options{'propoverride'} ) {
-		if ( defined $propPath ) {
-
-			if ( !-e $propPath ) {
-				Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO property file ($propPath) FOUND ($?:$!)} );
-				return;
-			}
-
+		if ( defined $propPath and -e $propPath ) {
+			tie @propertiesOverride, 'Tie::File', $propPath, autochomp => 0 or ( Sys::Syslog::syslog( 'err', qq{$action ::SKIP:: Couldn't open OVF Override Properties file [ $propPath ] ($?:$!)} ) and return );
 		} else {
-
-			if ( !-e $ovfPropertyPath ) {
-				Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO property path ($ovfPropertyPath) FOUND ($?:$!)} );
-				return;
-			} else {
-				tie @propertiesOverride, 'Tie::File', $ovfPropertyPath, autochomp => 0 or ( Sys::Syslog::syslog( 'err', qq{$action ::SKIP:: Couldn't open OVF Override Properties file [ $ovfPropertyPath ] ($?:$!)} ) and return );
-			}
+			Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO property path ($propPath) FOUND ($?:$!)} );
+			return;			
 		}
 	}
 
-	Sys::Syslog::syslog( 'info', qq{$action : INITIATE} );
-	my $deployCmd = qq{$ovftool --overwrite --powerOffTarget --name="$vmName" --vmFolder="$vmFolder" --datastore="$targetDatastore" --diskMode=$diskMode @propertiesOverride $sourceOvf vi://$vcUser:$vcPass\@$vcenter/"$dataCenter"/host/"$targetHost"};
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
+	if ( defined $cluster ) {
+		$cluster = qq{"$cluster"/};
+	}
+	
+	my $deployCmd = qq{$ovftool \\
+--overwrite \\
+--powerOffTarget \\
+--name="$vmName" \\};
+
+	if ( defined $vmFolder ) {
+		$deployCmd .= qq{
+--vmFolder="$vmFolder" \\};
+	}
+	
+	$deployCmd .= qq{
+--datastore="$targetDatastore" \\
+--diskMode=$diskMode \\
+@propertiesOverride$sourceOvf \\
+vi://$vcUser:$vcPass\@$vcenter/"$dataCenter"/host/$cluster"$targetHost"};
 	$deployCmd .= " $quietCmd" if ( $options{'quietrunning'} );
-	system( $deployCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action : WARNING ($deployCmd) ($?:$!)} );
-	Sys::Syslog::syslog( 'info', qq{$action : COMPLETE} );
+	#print "DEPLOY $deployCmd\n";
+	system( $deployCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($deployCmd) ($?:$!)} );
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
 }
 
@@ -144,11 +146,16 @@ sub destroy ( \% ) {
 
 	#remove_vm.pl --vmname="02-11-02-01-200-01" --username=Administrator --password=<vcpasswd> --server=cae-qa-v1.sc.steeleye.com
 
-	Sys::Syslog::syslog( 'info', qq{$action : INITIATE} );
-	my $destroyCmd = qq{$ovftool --vmname="$vmName" --username="$vcUser" --password="$vcPass" --server="$vcenter"};
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
+	my $destroyCmd = qq{$ovftool \\
+--vmname="$vmName" \\
+--username="$vcUser" \\
+--password="$vcPass" \\
+--server="$vcenter"};
 	$destroyCmd .= " $quietCmd" if ( $options{'quietrunning'} );
-	system( $destroyCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action : WARNING ($destroyCmd) ($?:$!)} );
-	Sys::Syslog::syslog( 'info', qq{$action : COMPLETE} );
+	#print "DESTROY $destroyCmd\n";
+	system( $destroyCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($destroyCmd) ($?:$!)} );
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
 }
 
@@ -185,11 +192,17 @@ sub power ( \% ) {
 		return;
 	}
 
-	Sys::Syslog::syslog( 'info', qq{$action : INITIATE} );
-	my $powerCmd = qq{$ovftool --operation="$reqAction" --vmname="$vmName" --username="$vcUser" --password="$vcPass" --server="$vcenter"};
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
+	my $powerCmd = qq{$ovftool \\
+--operation="$reqAction" \\
+--vmname="$vmName" \\
+--username="$vcUser" \\
+--password="$vcPass" \\
+--server="$vcenter"};
 	$powerCmd .= " $quietCmd" if ( $options{'quietrunning'} );
-	system( $powerCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action : WARNING ($powerCmd) ($?:$!)} );
-	Sys::Syslog::syslog( 'info', qq{$action : COMPLETE} );
+	#print("POWER $powerCmd\n");
+	system( $powerCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($powerCmd) ($?:$!)} );
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
 }
 
@@ -239,7 +252,7 @@ sub device ( \% ) {
 
 	#vmISOManagement.pl --server=cae-qa-v1 --username=Administrator --password=<vcpasswd> --datastore=hancock-cdimages --filename=/filepile/cdimages/Linux/sles11-SP2-GMC/SLES-11-SP2-DVD-x86_64-GMC-DVD1.iso --operation=mount --vmname=DEPLOYOVFTEST
 
-	Sys::Syslog::syslog( 'info', qq{$action : INITIATE} );
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
 
 	if ( $vmDevice eq 'iso' ) {
 
@@ -247,16 +260,19 @@ sub device ( \% ) {
 		$operation = 'mount'   if ( $reqAction eq 'attach' );
 		$operation = 'umount' if ( $reqAction eq 'detach' );
 
-#       Would like to query before attempting - but this script takes TO-LONG to execute. So, relying on retVal from the mount/umount
-#		my $deviceCmd = qq{$ovftool --operation="queryiso" --vmname="$vmName" --datastore="$isoDatastore" --filename="$isoPath" --username="$vcUser" --password="$vcPass" --server="$vcenter"};
-#		system( $deviceCmd ) == 0 or ( Sys::Syslog::syslog( 'warning', qq{$action : WARNING ($deviceCmd) ($?:$!)} ) and return );
-
-		my $deviceCmd = qq{$ovftool --operation="$operation" --vmname="$vmName" --datastore="$isoDatastore" --filename="$isoPath" --username="$vcUser" --password="$vcPass" --server="$vcenter"};
+		my $deviceCmd = qq{$ovftool \\
+--operation="$operation" \\
+--vmname="$vmName" \\
+--datastore="$isoDatastore" \\
+--filename="$isoPath" \\
+--username="$vcUser" \\
+--password="$vcPass" \\
+--server="$vcenter"};
 		$deviceCmd .= " $quietCmd" if ( $options{'quietrunning'} );
-		system( $deviceCmd ) == 0 or ( Sys::Syslog::syslog( 'warning', qq{$action : WARNING ($deviceCmd) ($?:$!)} ) and return );
+		system( $deviceCmd ) == 0 or ( Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($deviceCmd) ($?:$!)} ) and return );
 	}
 
-	Sys::Syslog::syslog( 'info', qq{$action : COMPLETE} );
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
 }
 
@@ -272,19 +288,52 @@ sub snapshot ( \% ) {
 	my $distro = $options{'distribution'};
 	my $major  = $options{'major'};
 	my $minor  = $options{'minor'};
+	
+	my $vmName              = $options{'vmname'};
+	my $vcenter             = $options{'vcenter'};
+	my $vcUser              = $options{'vcenteruser'};
+	my $vcPass              = $options{'vcenterpassword'};
+	my $snapshotName        = $options{'snapshotname'};
+	my $snapshotDescription = $options{'snapshotdescription'};
+ 	my $snapshotMemory      = $options{'snapshotmemory'};
+	my $snapshotQuiesce     = $options{'snapshotquiesce'};
 
 	my $reqAction = $options{'action'};
 	$action .= " ($reqAction)";
-
-	my $vmDevice = $options{'vmdevice'};
 
 	if ( !defined $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
 		return;
 	}
+	
+	my $ovftool = $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch}{'bin'}{'snapshot'}{'path'};
+	
+	if ( !defined $snapshotName ) {
+		$snapshotName = localtime;
+	}
 
-	Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NOT IMPLEMENTED YET} );
-	return;
+	if ( !defined $snapshotDescription ) {
+		$snapshotDescription = 'FVORGE AUTOMATION';
+	}	
+	
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
+	my $snapshotCmd = qq{$ovftool \\
+--vmname="$vmName" \\
+--username="$vcUser" \\
+--password="$vcPass" \\
+--server="$vcenter" \\
+--snapshotname="$snapshotName" \\
+--snapshotdescription="$snapshotDescription"};
+	if ( defined $snapshotMemory ) {
+		$snapshotCmd .= qq{ \\\n--snapshotmemory};
+	}
+	if ( defined $snapshotQuiesce ) {
+		$snapshotCmd .= qq{ \\\n--snapshotquiesce};
+	}
+	$snapshotCmd .= " $quietCmd" if ( $options{'quietrunning'} );
+	#print("SNAPSHOT $snapshotCmd\n");
+	system( $snapshotCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($snapshotCmd) ($?:$!)} );
+	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
 }
 
@@ -297,7 +346,6 @@ sub convertNames ( $$$$$$ ) {
 	my $group        = shift;
 	my $instance     = shift;
 
-	my $distNum;
 	my $majNum;
 	my $minNum;
 	my $archNum;
@@ -305,25 +353,14 @@ sub convertNames ( $$$$$$ ) {
 	my $instanceNum;
 
 	my $vmName;
-	my $sourceOvf;
 
 	my %ovfKeys;
-
-	$distNum = $distribution;
-	$distNum = '01' if ( $distribution eq 'RHEL' );
-	$distNum = '02' if ( $distribution eq 'SLES' );
-	$distNum = '03' if ( $distribution eq 'CentOS' );
-	$distNum = '06' if ( $distribution eq 'ORAL' );
 
 	$majNum = $major;
 	$majNum = '0' . $major if ( $major =~ /^\d$/ );
 
 	$minNum = $minor;
 	$minNum = '0' . $minor if ( $minor =~ /^\d$/ );
-
-	$archNum = $architecture;
-	$archNum = '01' if ( $architecture eq 'x86_64' );
-	$archNum = '02' if ( $architecture eq 'i686' );
 
 	$groupNum = $group;
 	$groupNum = '00' . $group if ( $group =~ /^\d$/ );
@@ -332,21 +369,79 @@ sub convertNames ( $$$$$$ ) {
 	$instanceNum = $instance;
 	$instanceNum = '0' . $instance if ( $instance =~ /^\d$/ );
 
-	$vmName = $distNum . '-' . $majNum . '-' . $minNum . '-' . $archNum . '-' . $groupNum . '-' . $instanceNum;
-
-	$sourceOvf = $distNum . '-' . $majNum . '-' . $minNum . '-' . $archNum . $OVF::Automation::Vars::sourceOvfSuffix;
-	$sourceOvf = $sourceOvf . '/' . $sourceOvf . '.ovf';
+	$vmName = $distribution . '-' . $majNum . '-' . $minNum . '-' . $architecture . '-' . $groupNum . '-' . $instanceNum;
 
 	$ovfKeys{'vmname'}       = $vmName;
-	$ovfKeys{'distribution'} = $distNum;
-	$ovfKeys{'architecture'} = $archNum;
 	$ovfKeys{'major'}        = $majNum;
 	$ovfKeys{'minor'}        = $minNum;
 	$ovfKeys{'group'}        = $groupNum;
 	$ovfKeys{'instance'}     = $instanceNum;
-	$ovfKeys{'sourceovf'}    = $sourceOvf;
 
 	return %ovfKeys;
+
+}
+
+sub validateArguments( $$$$$$ ) {
+	
+	my $distribution = shift;
+	my $major = shift;
+	my $minor = shift;
+	my $architecture = shift;
+	my $group = shift;
+	my $instance = shift;
+	
+	my $distroRegex      = $OVF::Vars::Common::sysVars{distrosRegex};
+	my $archRegex        = $OVF::Vars::Common::sysVars{archsRegex};
+	my $rhelVersionRegex = $OVF::Vars::Common::sysVars{rhelVersionsRegex};
+	my $slesVersionRegex = $OVF::Vars::Common::sysVars{slesVersionsRegex};
+	my $ubuntuVersionRegex = $OVF::Vars::Common::sysVars{ubuntuVersionsRegex};
+	
+	my @useError;
+	
+	if ( !defined $distribution or $distribution !~ /^($distroRegex)$/ ) {
+		push( @useError, "--distribution $distroRegex required\n" );
+	}
+
+	if ( !defined $major or $major !~ /^\d+$/ ) {
+		push( @useError, "--major # required\n" );
+	}
+
+	if ( !defined $minor or $minor !~ /^\d+$/ ) {
+		push( @useError, "--minor # required\n" );
+	}
+
+	if ( !defined $architecture or $architecture !~ /^($archRegex)$/ ) {
+		push( @useError, "--architecture $archRegex required\n" );
+	}
+
+	if ( !defined $group or $group !~ /^\d{1,3}$/ ) {
+		push( @useError, "--group ### required\n" );
+	}
+
+	if ( !defined $instance or $instance !~ /^\d{1,2}$/ ) {
+		push( @useError, "--instance ## required\n" );
+	}
+
+	my $version = '';
+	if ( defined $major and defined $minor ) {
+		$version = qq{$major.$minor};	
+	}
+	
+	if ( defined $distribution ) {
+		if ( $distribution eq 'SLES' and $version !~ /^($slesVersionRegex)$/ ) {
+			push( @useError, "$distribution accepted versions $slesVersionRegex required\n" );
+		}
+
+		if ( $distribution eq 'RHEL' and $version !~ /^($rhelVersionRegex)$/ ) {
+			push( @useError, "$distribution accepted versions $rhelVersionRegex required\n" );
+		}
+
+		if ( $distribution eq 'Ubuntu' and $version !~ /^($ubuntuVersionRegex)$/ ) {
+			push( @useError, "$distribution accepted versions $ubuntuVersionRegex required\n" );
+		}
+	}
+
+	return @useError;
 
 }
 

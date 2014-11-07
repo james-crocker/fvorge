@@ -1,14 +1,26 @@
-# qe_auto batch main configuration file
-#
-# this file defines the settings for the automation batch file to use
-#
+# Config settings for vm automation
 
-systems = v118, v119, v120, v121
-distribution = CentOS
-major = 6
-minor = 4
-architecture = x86_64
-group = 200
-instances = 1, 2, 3, 4
-targethosts = c9.sc.sios.com, c10.sc.sios.com, c8.sc.sios.com, c14.sc.sios.com
-targetdatastores = c9-local2, c10-local2, c8-local, c14-local
+# All other properties key on the count of arguments in 'name'. All other
+# properties argument counts must match 'name' argument count.
+
+name = minion1, minion2, minion3, minion4
+distribution = Ubuntu, Ubuntu, Ubuntu, Ubuntu
+major = 14, 14, 14, 14
+minor = 10, 10, 10, 10
+architecture = x86_64, x86_64, x86_64, x86_64
+group = 200, 200, 200, 200, 200
+instance = 01, 02, 03, 04
+vcenter = ngvc50dev, ngvc50dev, ngvc50dev, ngvc50dev
+vcenteruser = jcrocker, jcrocker, jcrocker, jcrocker
+vcenterpassword = jcrocker680tf, jcrocker680tf, jcrocker680tf, jcrocker680tf
+targethost = c9.sc.sios.com, c10.sc.sios.com, c8.sc.sios.com, c14.sc.sios.com
+targetdatastore = c9-local2, c10-local2, c8-local, c14-local
+datacenter = ng-c9-local, ng-c10-local, ng-c8-local, ng-c14-local
+sourceovf = http://fvorge/ovf/minion-ubuntu-14.04-x64.ova, http://fvorge/ovf/minion-ubuntu-14.04-x64.ova, http://fvorge/ovf/minion-ubuntu-14.04-x64.ova, http://fvorge/ovf/minion-ubuntu-14.04-x64.ova
+diskmode = thin, thin, thin, thin
+
+# These properties may have 'null' placeholder.
+proppath = /srv/pool/minions/Ubuntu/14/10/x86_64/200/1, /srv/pool/minions/Ubuntu/14/10/x86_64/200/2, /srv/pool/minions/Ubuntu/14/10/x86_64/200/3, /srv/pool/minions/Ubuntu/14/10/x86_64/200/4
+cluster = null, ng-vc-50-dev-ha, null, null
+# Folder *must* exist in vcenter if defined here - it will not be created.
+folder = null, minions, minions, minions
