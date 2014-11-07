@@ -1,3 +1,5 @@
+#!/usr/bin/perl -w
+
 # Copyright (c) 2013 SIOS Technology Corp.  All rights reserved.
 
 # This file is part of FVORGE.
