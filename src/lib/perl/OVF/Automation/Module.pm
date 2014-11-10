@@ -112,7 +112,7 @@ sub deploy ( \% ) {
 	
 	$deployCmd .= qq{ \\\n--datastore="$targetDatastore" \\\n--diskMode=$diskMode \\\n@propertiesOverride$sourceOvf \\\nvi://$vcUser:$vcPass\@$vcenter/"$dataCenter"/host/$cluster"$targetHost"};
 	$deployCmd .= " $quietCmd" if ( $options{'quietrunning'} );
-	print "DEPLOY $deployCmd\n";
+	#print "DEPLOY $deployCmd\n";
 	system( $deployCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($deployCmd) ($?:$!)} );
 	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
