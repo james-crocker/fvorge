@@ -64,6 +64,7 @@ sub deploy ( \% ) {
 	my $propPath        = $options{'proppath'};
 	my $vmFolder        = $options{'folder'};
 	my $cluster         = $options{'cluster'};
+	my $net             = $options{'net'};
 
 	if ( !defined $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch} ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO OVF PROPERTIES FOUND for $distro $major.$minor $arch} );
@@ -90,25 +91,28 @@ sub deploy ( \% ) {
 	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
 	if ( defined $cluster ) {
 		$cluster = qq{"$cluster"/};
+	} else {
+		$cluster = '';
 	}
 	
-	my $deployCmd = qq{$ovftool \\
---overwrite \\
---powerOffTarget \\
---name="$vmName" \\};
+	# To overwrite existing vm. Need option for this. Default to *not* overwrite existing vm.
+	#my $deployCmd = qq{$ovftool \\\n--overwrite \\\n--powerOffTarget \\\n--name="$vmName"};
+	my $deployCmd = qq{$ovftool \\\n--name="$vmName"};
 
 	if ( defined $vmFolder ) {
-		$deployCmd .= qq{
---vmFolder="$vmFolder" \\};
+		$deployCmd .= qq{ \\\n--vmFolder="$vmFolder"};
 	}
 	
-	$deployCmd .= qq{
---datastore="$targetDatastore" \\
---diskMode=$diskMode \\
-@propertiesOverride$sourceOvf \\
-vi://$vcUser:$vcPass\@$vcenter/"$dataCenter"/host/$cluster"$targetHost"};
+	if ( defined $net ) {
+		foreach my $sourceTarget ( split( /\s*;\s*/, $net ) ) {
+			my ( $source, $target ) = split( /\s*=\s*/, $sourceTarget );
+			$deployCmd .= qq{ \\\n--net:"$source"="$target"};
+		}
+	}
+	
+	$deployCmd .= qq{ \\\n--datastore="$targetDatastore" \\\n--diskMode=$diskMode \\\n@propertiesOverride$sourceOvf \\\nvi://$vcUser:$vcPass\@$vcenter/"$dataCenter"/host/$cluster"$targetHost"};
 	$deployCmd .= " $quietCmd" if ( $options{'quietrunning'} );
-	#print "DEPLOY $deployCmd\n";
+	print "DEPLOY $deployCmd\n";
 	system( $deployCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($deployCmd) ($?:$!)} );
 	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : COMPLETE} );
 
@@ -147,11 +151,7 @@ sub destroy ( \% ) {
 	#remove_vm.pl --vmname="02-11-02-01-200-01" --username=Administrator --password=<vcpasswd> --server=cae-qa-v1.sc.steeleye.com
 
 	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
-	my $destroyCmd = qq{$ovftool \\
---vmname="$vmName" \\
---username="$vcUser" \\
---password="$vcPass" \\
---server="$vcenter"};
+	my $destroyCmd = qq{$ovftool \\\n--vmname="$vmName" \\\n--username="$vcUser" \\\n--password="$vcPass" \\\n--server="$vcenter"};
 	$destroyCmd .= " $quietCmd" if ( $options{'quietrunning'} );
 	#print "DESTROY $destroyCmd\n";
 	system( $destroyCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($destroyCmd) ($?:$!)} );
@@ -193,12 +193,7 @@ sub power ( \% ) {
 	}
 
 	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
-	my $powerCmd = qq{$ovftool \\
---operation="$reqAction" \\
---vmname="$vmName" \\
---username="$vcUser" \\
---password="$vcPass" \\
---server="$vcenter"};
+	my $powerCmd = qq{$ovftool \\\n--operation="$reqAction" \\\n--vmname="$vmName" \\\n--username="$vcUser" \\\n--password="$vcPass" \\\n--server="$vcenter"};
 	$powerCmd .= " $quietCmd" if ( $options{'quietrunning'} );
 	#print("POWER $powerCmd\n");
 	system( $powerCmd ) == 0 or Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($powerCmd) ($?:$!)} );
@@ -260,14 +255,7 @@ sub device ( \% ) {
 		$operation = 'mount'   if ( $reqAction eq 'attach' );
 		$operation = 'umount' if ( $reqAction eq 'detach' );
 
-		my $deviceCmd = qq{$ovftool \\
---operation="$operation" \\
---vmname="$vmName" \\
---datastore="$isoDatastore" \\
---filename="$isoPath" \\
---username="$vcUser" \\
---password="$vcPass" \\
---server="$vcenter"};
+		my $deviceCmd = qq{$ovftool \\\n--operation="$operation" \\\n--vmname="$vmName" \\\n--datastore="$isoDatastore" \\\n--filename="$isoPath" \\\n--username="$vcUser" \\\n--password="$vcPass" \\\n--server="$vcenter"};
 		$deviceCmd .= " $quietCmd" if ( $options{'quietrunning'} );
 		system( $deviceCmd ) == 0 or ( Sys::Syslog::syslog( 'warning', qq{$action ($vmName) : WARNING ($deviceCmd) ($?:$!)} ) and return );
 	}
@@ -317,13 +305,7 @@ sub snapshot ( \% ) {
 	}	
 	
 	Sys::Syslog::syslog( 'info', qq{$action ($vmName) : INITIATE} );
-	my $snapshotCmd = qq{$ovftool \\
---vmname="$vmName" \\
---username="$vcUser" \\
---password="$vcPass" \\
---server="$vcenter" \\
---snapshotname="$snapshotName" \\
---snapshotdescription="$snapshotDescription"};
+	my $snapshotCmd = qq{$ovftool \\\n--vmname="$vmName" \\\n--username="$vcUser" \\\n--password="$vcPass" \\\n--server="$vcenter" \\\n--snapshotname="$snapshotName" \\\n--snapshotdescription="$snapshotDescription"};
 	if ( defined $snapshotMemory ) {
 		$snapshotCmd .= qq{ \\\n--snapshotmemory};
 	}

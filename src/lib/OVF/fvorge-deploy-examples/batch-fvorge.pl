@@ -58,7 +58,7 @@ if ( !defined $vars ) {
 	usage();
 }
 
-my ( $nameRef, $instanceRef, $targethostRef, $targetdatastoreRef, $vcenterRef, $vcenteruserRef, $vcenterpasswordRef, $proppathRef, $datacenterRef, $sourceovfRef, $diskmodeRef, $folderRef, $clusterRef, $distributionRef, $majorRef, $minorRef, $architectureRef, $groupRef) = ovfCheckArgs();
+my ( $nameRef, $instanceRef, $targethostRef, $targetdatastoreRef, $vcenterRef, $vcenteruserRef, $vcenterpasswordRef, $proppathRef, $datacenterRef, $sourceovfRef, $diskmodeRef, $folderRef, $clusterRef, $netRef, $distributionRef, $majorRef, $minorRef, $architectureRef, $groupRef) = ovfCheckArgs();
 
 my @name            = @{ $nameRef };
 my @instance        = @{ $instanceRef };
@@ -78,6 +78,7 @@ my @major           = @{ $majorRef };
 my @minor           = @{ $minorRef };
 my @architecture    = @{ $architectureRef };
 my @group           = @{ $groupRef };
+my @net             = @{ $netRef };
 	
 if ( $ovfAction eq 'destroy' ) {
 	ovfDestroy();
@@ -115,6 +116,10 @@ sub getBulkArguments( $ ) {
 
 	if ( defined $folder[ $vmCount ] and $folder[ $vmCount ] ne 'null' ) {
 		$args .= qq{ \\\n--folder="$folder[ $vmCount ]"};
+	}
+	
+	if ( defined $net[ $vmCount ] and $net[ $vmCount ] ne 'null' ) {
+		$args .= qq{ \\\n--net="$net[ $vmCount ]"};
 	}
 
 	if ( defined $proppath[ $vmCount ] and $proppath[ $vmCount ] ne 'null' ) {
@@ -211,25 +216,28 @@ sub ovfCheckArgs () {
 	my $slesVersionRegex = q{10\.4|11\.1|11\.2};
 	my $ubuntuVersionRegex = q{14\.04|14\.10};
 
+	my $configSplit      = q{/\s*,\s*/};
+	
 	# Get and check args for OVF deployment
-	my @name             = split(/,\s*/, $vars->{'name'} );
-	my @distribution     = split(/,\s*/, $vars->{'distribution'} );
-	my @major            = split(/,\s*/, $vars->{'major'} );
-	my @minor            = split(/,\s*/, $vars->{'minor'} );
-	my @architecture     = split(/,\s*/, $vars->{'architecture'} );
-	my @group            = split(/,\s*/, $vars->{'group'} );
-	my @instance         = split(/,\s*/, $vars->{'instance'} );
-	my @targethost       = split(/,\s*/, $vars->{'targethost'} );
-	my @targetdatastore  = split(/,\s*/, $vars->{'targetdatastore'} );
-	my @vcenter          = split(/,\s*/, $vars->{'vcenter'} );
-	my @vcenteruser      = split(/,\s*/, $vars->{'vcenteruser'} );
-	my @vcenterpassword  = split(/,\s*/, $vars->{'vcenterpassword'} );
-	my @proppath         = split(/,\s*/, $vars->{'proppath'} );
-	my @datacenter       = split(/,\s*/, $vars->{'datacenter'} );
-	my @sourceovf        = split(/,\s*/, $vars->{'sourceovf'} );
-	my @diskmode         = split(/,\s*/, $vars->{'diskmode'} );
-	my @cluster          = split(/,\s*/, $vars->{'cluster'} );
-	my @folder           = split(/,\s*/, $vars->{'folder'} );
+	my @name             = split($configSplit, $vars->{'name'} );
+	my @distribution     = split($configSplit, $vars->{'distribution'} );
+	my @major            = split($configSplit, $vars->{'major'} );
+	my @minor            = split($configSplit, $vars->{'minor'} );
+	my @architecture     = split($configSplit, $vars->{'architecture'} );
+	my @group            = split($configSplit, $vars->{'group'} );
+	my @instance         = split($configSplit, $vars->{'instance'} );
+	my @targethost       = split($configSplit, $vars->{'targethost'} );
+	my @targetdatastore  = split($configSplit, $vars->{'targetdatastore'} );
+	my @vcenter          = split($configSplit, $vars->{'vcenter'} );
+	my @vcenteruser      = split($configSplit, $vars->{'vcenteruser'} );
+	my @vcenterpassword  = split($configSplit, $vars->{'vcenterpassword'} );
+	my @proppath         = split($configSplit, $vars->{'proppath'} );
+	my @datacenter       = split($configSplit, $vars->{'datacenter'} );
+	my @sourceovf        = split($configSplit, $vars->{'sourceovf'} );
+	my @diskmode         = split($configSplit, $vars->{'diskmode'} );
+	my @cluster          = split($configSplit, $vars->{'cluster'} );
+	my @folder           = split($configSplit, $vars->{'folder'} );
+	my @net              = split($configSplit, $vars->{'net'} );
 
 	if ( scalar( @name ) != scalar( @distribution ) ) {
 		push( @useError, "Number of distribution doesn't match the number of name\n" );
@@ -299,6 +307,10 @@ sub ovfCheckArgs () {
 		push( @useError, "Number of folder doesn't match the number of name\n" );
 	}
 	
+	if ( scalar( @name ) != scalar( @net ) ) {
+		push( @useError, "Number of net doesn't match the number of name\n" );
+	}
+	
 	# Create a vmname based on the name and other properties and validate arguments.
 	my $i = 0;
 	foreach my $name ( @name ) {	
@@ -318,6 +330,6 @@ sub ovfCheckArgs () {
 		exit 5;
 	}
 
-	return ( \@name, \@instance, \@targethost, \@targetdatastore, \@vcenter, \@vcenteruser, \@vcenterpassword, \@proppath, \@datacenter, \@sourceovf, \@diskmode, \@folder, \@cluster, \@distribution, \@major, \@minor, \@architecture, \@group);
+	return ( \@name, \@instance, \@targethost, \@targetdatastore, \@vcenter, \@vcenteruser, \@vcenterpassword, \@proppath, \@datacenter, \@sourceovf, \@diskmode, \@folder, \@cluster, \@net, \@distribution, \@major, \@minor, \@architecture, \@group);
 
 }

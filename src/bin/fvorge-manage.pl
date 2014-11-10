@@ -70,6 +70,7 @@ my $snapshotMemory = 0;
 my $snapshotQuiesce = 0;
 my $vmFolder;
 my $cluster;
+my $net;
 my $quietRunning = 0;
 
 ## Getopts ----------------------------------------------
@@ -93,6 +94,7 @@ Getopt::Long::GetOptions(
 	'diskmode|dm=s'            => \$diskMode,
 	'folder|f=s'               => \$vmFolder,
 	'cluster|c=s'              => \$cluster,
+	'net|n=s'                  => \$net,
 	'isodatastore|isod=s'      => \$isoDatastore,
 	'isopath|isop=s'           => \$isoPath,
 	'vmdevice|vd=s'            => \$vmDevice,
@@ -213,6 +215,7 @@ $options{vcenteruser}         = $vcenterUser;
 $options{vcenterpassword}     = $vcenterPassword;
 $options{datacenter}          = $dataCenter;
 $options{cluster}             = $cluster;
+$options{net}                 = $net;
 $options{folder}              = $vmFolder;
 $options{sourceovf}           = $sourceOvf;
 $options{targethost}          = $targetHost;
