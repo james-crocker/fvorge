@@ -216,28 +216,28 @@ sub ovfCheckArgs () {
 	my $slesVersionRegex = q{10\.4|11\.1|11\.2};
 	my $ubuntuVersionRegex = q{14\.04|14\.10};
 
-	my $configSplit      = q{/\s*,\s*/};
+	my $configSplit      = q{\s*,\s*};
 	
 	# Get and check args for OVF deployment
-	my @name             = split($configSplit, $vars->{'name'} );
-	my @distribution     = split($configSplit, $vars->{'distribution'} );
-	my @major            = split($configSplit, $vars->{'major'} );
-	my @minor            = split($configSplit, $vars->{'minor'} );
-	my @architecture     = split($configSplit, $vars->{'architecture'} );
-	my @group            = split($configSplit, $vars->{'group'} );
-	my @instance         = split($configSplit, $vars->{'instance'} );
-	my @targethost       = split($configSplit, $vars->{'targethost'} );
-	my @targetdatastore  = split($configSplit, $vars->{'targetdatastore'} );
-	my @vcenter          = split($configSplit, $vars->{'vcenter'} );
-	my @vcenteruser      = split($configSplit, $vars->{'vcenteruser'} );
-	my @vcenterpassword  = split($configSplit, $vars->{'vcenterpassword'} );
-	my @proppath         = split($configSplit, $vars->{'proppath'} );
-	my @datacenter       = split($configSplit, $vars->{'datacenter'} );
-	my @sourceovf        = split($configSplit, $vars->{'sourceovf'} );
-	my @diskmode         = split($configSplit, $vars->{'diskmode'} );
-	my @cluster          = split($configSplit, $vars->{'cluster'} );
-	my @folder           = split($configSplit, $vars->{'folder'} );
-	my @net              = split($configSplit, $vars->{'net'} );
+	my @name             = split(/$configSplit/, $vars->{'name'} );
+	my @distribution     = split(/$configSplit/, $vars->{'distribution'} );
+	my @major            = split(/$configSplit/, $vars->{'major'} );
+	my @minor            = split(/$configSplit/, $vars->{'minor'} );
+	my @architecture     = split(/$configSplit/, $vars->{'architecture'} );
+	my @group            = split(/$configSplit/, $vars->{'group'} );
+	my @instance         = split(/$configSplit/, $vars->{'instance'} );
+	my @targethost       = split(/$configSplit/, $vars->{'targethost'} );
+	my @targetdatastore  = split(/$configSplit/, $vars->{'targetdatastore'} );
+	my @vcenter          = split(/$configSplit/, $vars->{'vcenter'} );
+	my @vcenteruser      = split(/$configSplit/, $vars->{'vcenteruser'} );
+	my @vcenterpassword  = split(/$configSplit/, $vars->{'vcenterpassword'} );
+	my @proppath         = split(/$configSplit/, $vars->{'proppath'} );
+	my @datacenter       = split(/$configSplit/, $vars->{'datacenter'} );
+	my @sourceovf        = split(/$configSplit/, $vars->{'sourceovf'} );
+	my @diskmode         = split(/$configSplit/, $vars->{'diskmode'} );
+	my @cluster          = split(/$configSplit/, $vars->{'cluster'} );
+	my @folder           = split(/$configSplit/, $vars->{'folder'} );
+	my @net              = split(/$configSplit/, $vars->{'net'} );
 
 	if ( scalar( @name ) != scalar( @distribution ) ) {
 		push( @useError, "Number of distribution doesn't match the number of name\n" );
