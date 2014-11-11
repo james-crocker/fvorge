@@ -41,7 +41,7 @@ $sysVars{distrosRegex}        = q{RHEL|CentOS|ORAL|SLES|Ubuntu};
 $sysVars{archsRegex}          = q{x86_64|i686};
 $sysVars{rhelVersionsRegex}   = q{5\.9|6\.0|6\.1|6\.2|6\.3|6\.4};
 $sysVars{slesVersionsRegex}   = q{10\.4|11\.1|11\.2};
-$sysVars{ubuntuVersionsRegex} = q{13\.10|14\.04};
+$sysVars{ubuntuVersionsRegex} = q{13\.10|14\.04|14\.10};
 
 $sysVars{'fvorge'}{home}           = '/opt/fvorge';
 $sysVars{'fvorge'}{bin}            = $sysVars{'fvorge'}{home} . '/bin';

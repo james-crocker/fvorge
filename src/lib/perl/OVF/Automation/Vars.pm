@@ -28,29 +28,16 @@ my $cdImagesPath = 'Linux';
 
 our $actionRegex     = 'deploy|destroy|poweron|poweroff|suspend|reset|reboot|shutdown|attach|detach|snapshot';
 our $vmDeviceRegex   = 'iso|net|floppy';
-our $sourceOvfSuffix = '-OVF';
 
 $common{'RHEL'} = {
-	'defaults' => {
-		'vcenterserver'    => 'vc1.sc.sios.com',
-		'vcenteruser'      => 'Administrator',
-		'vcenterpassword'  => '<YOUR_VC_PASSWORD>',
-		'datacentername'   => 'SIOS QA Datacenter',
-		'diskmode'         => 'thin',
-		'isodatastore'     => 'hancock-cdimages',
-		'sourceovfbaseurl' => 'http://fvorge.sc.sios.com/~fvorge/ovf/',
-		'targethost'       => 'c10.sc.sios.com',
-		'targetdatastore'  => 'c10-local2'
-	},
 	'bin' => {
 		'removabledevices' => { 'path' => '/opt/fvorge/lib/VMware/sdk/removabledevices.pl' },
 		'ovftool'          => { 'path' => '/usr/bin/ovftool' },
 		'isomanage'        => { 'path' => '/opt/fvorge/lib/VMware/contrib/vmISOManagement.pl' },
 		'removevm'         => { 'path' => '/opt/fvorge/lib/VMware/contrib/remove_vm.pl' },
 		'powerops'         => { 'path' => '/opt/fvorge/lib/VMware/sdk/powerops.pl' },
-		'snapshot'         => { 'path' => '/opt/fvorge/lib/VMware/sdk/snapshot.pl' }
-	},
-	'ovf-properties-root' => { 'path' => '/opt/fvorge/lib/OVF/clusters' }
+		'snapshot'         => { 'path' => '/opt/fvorge/lib/sios/VMware/snapshot.pl' }
+	}
 };
 
 $automate{'RHEL'}{5}{9}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
@@ -73,6 +60,9 @@ $automate{'ORAL'}{6}{4}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 $automate{'SLES'}{10}{4}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 $automate{'SLES'}{11}{1}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 $automate{'SLES'}{11}{2}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
+
+$automate{'Ubuntu'}{14}{04}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
+$automate{'Ubuntu'}{14}{10}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 
 $automate{'RHEL'}{5}{9}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL5.9/rhel-server-5.9-x86_64-dvd.iso';
 $automate{'RHEL'}{6}{0}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL6.0/rhel-server-6.0-x86_64-dvd.iso';
