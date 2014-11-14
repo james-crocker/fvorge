@@ -4,5 +4,5 @@ Priority: extra
 Maintainer: SIOS Technology Corp.
 Version: %VERSION%
 Architecture: all
-Depends: perl
+Depends: perl, libswitch-perl, cracklib-runtime
 Description: OVF configuration utility
