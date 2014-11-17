@@ -77,6 +77,9 @@ sub deploy ( \% ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO executable ($ovftool) FOUND for $distro $major.$minor $arch} );
 		return;
 	}
+	
+	# Accept ALL Eulas by default. Add other switches here as required.
+	$ovftool .= ' --acceptAllEulas';
 
 	my @propertiesOverride;
 	if ( $options{'propoverride'} ) {
