@@ -31,7 +31,7 @@ use OVF::Automation::Module;
 use OVF::Automation::Vars;
 use OVF::Vars::Common;
 
-Sys::Syslog::openlog( 'fvorge-deploy', 'nofatal,ndelay,noeol,nonul,pid', 'local6' );
+Sys::Syslog::openlog( 'fvorge-manage', 'nofatal,ndelay,noeol,nonul,pid', 'local6' );
 
 my @useError;
 my %options;
