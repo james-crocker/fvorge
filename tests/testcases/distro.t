@@ -3,7 +3,7 @@
 use Test::More tests => 2;
 
 BEGIN {
-    push @INC, "..";
+    push @INC, '../../src/lib/perl/Linux';
 }
 
 use Distribution;

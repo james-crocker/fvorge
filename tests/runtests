@@ -16,7 +16,7 @@ for f in `find $dir -type d -name testcases`
 do
 	echo "Running unit tests in $f"
 	pushd $f >/dev/null
-	for case in `find $f -type f -maxdepth 1`
+	for case in `find $f -maxdepth 1 -type f`
 	do
 		[ -x "$case" ] || continue
 		echo "Test case executing: $case"
@@ -28,6 +28,6 @@ do
 			err=1
 		fi
 	done
-	popd $f >/dev/null
+	popd >/dev/null
 done
 exit $err
