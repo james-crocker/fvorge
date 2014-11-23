@@ -24,19 +24,34 @@ use Storable;
 our %automate;
 my %common;
 
-my $cdImagesPath = 'Linux';
+our $powerOnName             = 'poweron';
+our $powerOffName            = 'poweroff';
+our $suspendName             = 'suspend';
+our $resetName               = 'reset';
+our $rebootName              = 'reboot';
+our $shutdownName            = 'shutdown';
+our $deployName              = 'deploy';
+our $destroyName             = 'destroy';
+our $deviceAttachName        = 'attach';
+our $deviceDetachName        = 'detach';
+our $deviceListName          = 'list';
+our $snapshotCreateName      = 'snapshot';
+our $snapshotRevertName      = 'snapshot-revert';
+our $snapshotDestroyName     = 'snapshot-destroy';
+our $vmDeviceIsoName         = 'iso';
+our $vmDeviceConnectableName = 'connectable';
+our $powerRegex              = qq{$powerOnName|$powerOffName|$suspendName|$resetName|$rebootName|$shutdownName};
+our $deviceRegex             = qq{$deviceAttachName|$deviceDetachName|$deviceListName};
+our $snapshotRegex           = qq{$snapshotCreateName|$snapshotRevertName|$snapshotDestroyName};
+our $vmDeviceRegex           = qq{$vmDeviceIsoName|$vmDeviceConnectableName};
+our $actionRegex             = qq{$deployName|$destroyName|$powerRegex|$deviceRegex|$snapshotRegex};
 
-our $actionRegex     = 'deploy|destroy|poweron|poweroff|suspend|reset|reboot|shutdown|attach|detach|snapshot';
-our $vmDeviceRegex   = 'iso|net|floppy';
+our $defaultOvftoolPath         = '/usr/bin/ovftool';
+our $defaultSnapshotDescription = 'FVORGE AUTOMATION';
 
 $common{'RHEL'} = {
 	'bin' => {
-		'removabledevices' => { 'path' => '/opt/fvorge/lib/VMware/sdk/removabledevices.pl' },
-		'ovftool'          => { 'path' => '/usr/bin/ovftool' },
-		'isomanage'        => { 'path' => '/opt/fvorge/lib/VMware/contrib/vmISOManagement.pl' },
-		'removevm'         => { 'path' => '/opt/fvorge/lib/VMware/contrib/remove_vm.pl' },
-		'powerops'         => { 'path' => '/opt/fvorge/lib/VMware/sdk/powerops.pl' },
-		'snapshot'         => { 'path' => '/opt/fvorge/lib/sios/VMware/snapshot.pl' }
+		'ovftool'          => { 'path' => $defaultOvftoolPath },
 	}
 };
 
@@ -63,26 +78,5 @@ $automate{'SLES'}{11}{2}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 
 $automate{'Ubuntu'}{14}{04}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
 $automate{'Ubuntu'}{14}{10}{'x86_64'} = Storable::dclone( $common{'RHEL'} );
-
-$automate{'RHEL'}{5}{9}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL5.9/rhel-server-5.9-x86_64-dvd.iso';
-$automate{'RHEL'}{6}{0}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL6.0/rhel-server-6.0-x86_64-dvd.iso';
-$automate{'RHEL'}{6}{1}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL6.1/rhel-server-6.1-x86_64-dvd.iso';
-$automate{'RHEL'}{6}{2}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL6.2/rhel-server-6.2-x86_64-dvd.iso';
-$automate{'RHEL'}{6}{3}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL6.3/rhel-server-6.3-x86_64-dvd.iso';
-$automate{'RHEL'}{6}{4}{'x86_64'}{'iso'} = $cdImagesPath . '/RHEL6.4/rhel-server-6.4-x86_64-dvd.iso';
-
-$automate{'CentOS'}{5}{9}{'x86_64'}{'iso'} = $cdImagesPath . '/CentOS5.9/CentOS-5.9-x86_64-bin-DVD-1of2.iso';
-#$automate{'CentOS'}{6}{0}{'x86_64'}{'iso'} = $cdImagesPath.'/CentOS6.0/rhel-server-6.0-x86_64-dvd.iso';
-$automate{'CentOS'}{6}{1}{'x86_64'}{'iso'} = $cdImagesPath . '/CentOS6.1/CentOS-6.1-x86_64-bin-DVD1.iso';
-$automate{'CentOS'}{6}{2}{'x86_64'}{'iso'} = $cdImagesPath . '/CentOS6.2/CentOS-6.2-x86_64-bin-DVD1.iso';
-$automate{'CentOS'}{6}{3}{'x86_64'}{'iso'} = $cdImagesPath . '/CentOS6.3/CentOS-6.3-x86_64-bin-DVD1.iso';
-$automate{'CentOS'}{6}{4}{'x86_64'}{'iso'} = $cdImagesPath . '/CentOS6.4/CentOS-6.4-x86_64-bin-DVD1.iso';
-
-$automate{'ORAL'}{6}{3}{'x86_64'}{'iso'} = $cdImagesPath . '/OEL6.3/OracleLinux-R6-U3-Server-x86_64-dvd.iso';
-$automate{'ORAL'}{6}{4}{'x86_64'}{'iso'} = $cdImagesPath . '/OEL6.4/OracleLinux-R6-U4-Server-x86_64-dvd.iso';
-
-$automate{'SLES'}{10}{4}{'x86_64'}{'iso'} = $cdImagesPath . '/sles10-sp4/SLES-10-SP4-DVD-x86_64-GM-DVD1.iso';
-$automate{'SLES'}{11}{1}{'x86_64'}{'iso'} = $cdImagesPath . '/sles11-SP1-GMC/SLES-11-SP1-DVD-x86_64-GM-DVD1.iso';
-$automate{'SLES'}{11}{2}{'x86_64'}{'iso'} = $cdImagesPath . '/sles11-SP2-GMC/SLES-11-SP2-DVD-x86_64-GMC-DVD1.iso';
 
 1;

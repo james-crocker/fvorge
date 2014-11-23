@@ -5,7 +5,3 @@ TARGET=$1
 SOURCE=../src
 mkdir -p $TARGET/opt/fvorge
 cp -a $SOURCE/* $TARGET/opt/fvorge/
-find $TARGET/opt/fvorge -type d -name 'testcases' -print | while read d
-do
-	rm -rf $d
-done

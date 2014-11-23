@@ -137,7 +137,7 @@ if ( $distribution ne 'SLES' and $version !~ /^($rhelVersionRegex)$/ ) {
 
 pod2usage( @useError ) if @useError;
 
-my %ovfKeys = OVF::Automation::Module::convertNames( $distribution, $major, $minor, $architecture, $group, $instance );
+my %ovfKeys = OVF::Automation::Module::convertNames( %options );
 if ( !defined $vmName and defined $ovfKeys{'vmname'} ) {
 	$vmName = $ovfKeys{'vmname'};
 }
