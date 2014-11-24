@@ -466,9 +466,9 @@ A file should contain OVF properties B<matching> the properties defined in the O
 
 =over 4
 
-=item "host"="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=900 instance=10
+=item "host"="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=900 instance=10"
 
-=item "host.time.zone"=US/Eastern
+=item "host.time.zone"="US/Eastern"
 
 =item "lite.network.ipv4"="192.168.10.128"
 
