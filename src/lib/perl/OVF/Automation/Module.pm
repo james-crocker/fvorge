@@ -118,27 +118,26 @@ sub deploy ( \% ) {
 	}
 	
 	# Get any OVF properties override values for the given sourceOvf.
-	my @filePropertiesOverride;
-	my @propertiesOverride;
+	my @propertiesToOverride;
+	my @propertiesToOverrideOvftoolSyntax;
 	if ( defined $propoverride ) {
 		if ( -e $propoverride ) {
-			tie @filePropertiesOverride, 'Tie::File', $propoverride, autochomp => 0, mode => O_RDONLY or ( logMessage( $action, undef, 'err', 'skip', qq{Couldn't open OVF Override Properties file [ $propoverride ] ($?:$!)} ) and return );
+			tie @propertiesToOverride, 'Tie::File', $propoverride, autochomp => 0, mode => O_RDONLY or ( logMessage( $action, undef, 'err', 'skip', qq{Couldn't open OVF Override Properties file [ $propoverride ] ($?:$!)} ) and return );
 		} else {
-			logMessage( $action, undef, 'err', 'skip', qq{NO property path ($propoverride) FOUND ($?:$!)} );
-			return;			
+			# Perhaps the properties are all in the option; look for it and slurp.
+			if ( $propoverride =~ /"\s*=\s*"/ ) {
+				@propertiesToOverride = split( $OVF::Automation::Vars::propOverrideSplitter, $propoverride );
+			} else {
+				logMessage( $action, undef, 'err', 'skip', qq{NO PROPERTY FILE ($propoverride) FOUND *OR* OVF PROPERTIES NOT IDENTIFIED} );
+				return;
+			}			
 		}
 		# Append/Prepend OVF properties for ovftool format
-		foreach my $ovfProperty ( @filePropertiesOverride ) {
+		foreach my $ovfProperty ( @propertiesToOverride ) {
 			# Account for legacy file that already was defined as --prop:(...) \ - add them otherwise
 			# Skip blank or '#' commented lines.
 			if ( $ovfProperty !~ /^\s+$/ or $ovfProperty !~ /^\s*#/ ) {
-				if ( $ovfProperty !~ /^--prop:/ ) {
-					$ovfProperty = qq{--prop:$ovfProperty};
-				}
-				if ( $ovfProperty !~ /\s+\\$/ ) {
-					$ovfProperty .= q{ \\};
-				}
-				push( @propertiesOverride, $ovfProperty );
+					push( @propertiesToOverrideOvftoolSyntax, qq{--prop:$ovfProperty} );
 			}
 		}
 	}
@@ -182,11 +181,12 @@ sub deploy ( \% ) {
 	
 	$deployCmd .= qq{ \\\n--datastore="$targetDatastore"};
 	$deployCmd .= qq{ \\\n--diskMode=$diskMode};
-	if ( scalar @propertiesOverride > 0 ) {
-		$deployCmd .= qq{ \\\n@propertiesOverride};
+	if ( scalar @propertiesToOverrideOvftoolSyntax > 0 ) {
+		foreach my $prop ( @propertiesToOverrideOvftoolSyntax ) {
+			$deployCmd .= qq{ \\\n$prop};
+		}
 	}
-	$deployCmd .= qq{ \\\n} if ( scalar @propertiesOverride <= 0 );
-	$deployCmd .= $sourceOvf;
+	$deployCmd .= qq{ \\\n$sourceOvf};
 	$deployCmd .= qq{ \\\nvi://"$vcUser":"$vcPass"\@"$vcenter"/"$dataCenter"/host/$cluster"$targetHost"};
 	$deployCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
 	print qq{DEPLOY COMMAND:\n$deployCmd\n} if ( $options{'verbose'} );
