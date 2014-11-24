@@ -183,7 +183,6 @@ sub deploy ( \% ) {
 	$deployCmd .= qq{ \\\n--diskMode=$diskMode};
 	if ( scalar @propertiesToOverrideOvftoolSyntax > 0 ) {
 		foreach my $prop ( @propertiesToOverrideOvftoolSyntax ) {
-			print "PROP: ---$prop---\n";
 			$deployCmd .= qq{ \\\n$prop};
 		}
 	}
