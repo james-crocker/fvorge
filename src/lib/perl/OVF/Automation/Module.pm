@@ -122,7 +122,7 @@ sub deploy ( \% ) {
 	my @propertiesToOverrideOvftoolSyntax;
 	if ( defined $propoverride ) {
 		if ( -e $propoverride ) {
-			tie @propertiesToOverride, 'Tie::File', $propoverride, autochomp => 0, mode => O_RDONLY or ( logMessage( $action, undef, 'err', 'skip', qq{Couldn't open OVF Override Properties file [ $propoverride ] ($?:$!)} ) and return );
+			tie @propertiesToOverride, 'Tie::File', $propoverride, autochomp => 1, mode => O_RDONLY or ( logMessage( $action, undef, 'err', 'skip', qq{Couldn't open OVF Override Properties file [ $propoverride ] ($?:$!)} ) and return );
 		} else {
 			# Perhaps the properties are all in the option; look for it and slurp.
 			if ( $propoverride =~ /"\s*=\s*"/ ) {
