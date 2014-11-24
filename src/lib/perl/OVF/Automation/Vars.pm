@@ -49,6 +49,8 @@ our $actionRegex             = qq{$deployName|$destroyName|$powerRegex|$deviceRe
 our $defaultOvftoolPath         = '/usr/bin/ovftool';
 our $defaultSnapshotDescription = 'FVORGE AUTOMATION';
 
+our $propOverrideSplitter       = q{\s*;;;\s*};
+
 $common{'RHEL'} = {
 	'bin' => {
 		'ovftool'          => { 'path' => $defaultOvftoolPath },

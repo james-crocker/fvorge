@@ -204,7 +204,7 @@ VMware vCenter details and VM guest name are B<I<required>> for all management o
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<deploy> I<REQUIRED> B<--sourceovf|-sovf>=I<URL> B<--datacenter|-dc>=I<NAME> B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME> [--cluster|-c=I<NAME>] [--net|n=I<SOURCE_NAME=TARGET_NAME>[;S=T[;S=T]] [--overwrite|-o] [--propoverride|-po=I<FILE>] [--diskmode|-dm=I<thin>] [--folder|-f=<NAME>]
+=item fvorge-manage B<--action|-a>=I<deploy> I<REQUIRED> B<--sourceovf|-sovf>=I<URL> B<--datacenter|-dc>=I<NAME> B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME> [--cluster|-c=I<NAME>] [--net|n=I<SOURCE_NAME=TARGET_NAME>[;S=T[;S=T]] [--overwrite|-o] [--propoverride|-po=I<FILE|ovfprop=ovfvalue[;;;ovfprop=ovfvalue]>] [--diskmode|-dm=I<thin>] [--folder|-f=<NAME>]
 
 =back
 
@@ -456,7 +456,7 @@ A file should contain OVF properties B<matching> the properties defined in the O
 
 =item # Comment
 
-=item "propertyName"="newValue"
+=item "OVFPropertyName"="OVFOverrideValue"
 
 =item ...
 
@@ -466,9 +466,9 @@ A file should contain OVF properties B<matching> the properties defined in the O
 
 =over 4
 
-=item "host"="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=900 instance=10"
+=item "host"="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=900 instance=10
 
-=item "host.time.zone"="US/Eastern"
+=item "host.time.zone"=US/Eastern
 
 =item "lite.network.ipv4"="192.168.10.128"
 
