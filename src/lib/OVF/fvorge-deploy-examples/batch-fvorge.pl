@@ -316,7 +316,8 @@ sub ovfCheckArgs () {
 	foreach my $name ( @name ) {	
 		my @valUseError = OVF::Automation::Module::validateArguments( $distribution[ $i ], $major[ $i ], $minor[ $i ], $architecture[ $i ], $group[ $i ], $instance[ $i ] );
 		push( @useError, @valUseError ) if ( @valUseError );
-		my %ovfKeys = OVF::Automation::Module::convertNames( $distribution[ $i ], $major[ $i ], $minor[ $i ], $architecture[ $i ], $group[ $i ], $instance[ $i ] );
+		my %options = {'distribution' => $distribution[ $i ], 'major' => $major[ $i ], 'minor' => $minor[ $i ], 'architecture' => $architecture[ $i ], 'group' => $group[ $i ], 'instance' => $instance[ $i ]};
+		my %ovfKeys = OVF::Automation::Module::convertNames( %options );
 		if ( defined $ovfKeys{'vmname'} ) {
 			$name = $name . '-' . $ovfKeys{'vmname'};
 		}

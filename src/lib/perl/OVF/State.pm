@@ -39,13 +39,14 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 
 my $propertiesPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{path};
 my $propertiesFile = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{file};
+my $ovfEnvName     = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{ovfEnv};
 
 my $ovfPath = qq{$propertiesPath/$propertiesFile};
 
 # Easier to work with arrays for saving/reading the OVF properties file than parsing the complex hash %options
 my @currentOvfProperties;
 my @previousOvfProperties;
-
+my $overrideOvfDefaults = 0;
 my $originalsPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{path};
 
 my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|service\.security\.ssh\.user\.config|custom\..+)$};
@@ -310,12 +311,13 @@ sub isSaneEqual ( \$ ) {
 
 }
 
-sub isSaneDoubleParens ( \$ ) {
+sub isSaneDoubleSemicolon ( \$ ) {
 
 	my $value = ${ ( shift ) };
 
 	# ! ' ;; '
-	if ( $value =~ /;;/ and ( $value =~ /\S;;/ or $value =~ /;;\S/ ) ) {
+	# Don't alarm on &apos;; or &lt;; or &gt;;
+	if ( $value =~ /;;/ and ( $value =~ /\S;;/ or $value =~ /;;\S/ ) and $value !~ /\&(apos|lt|gt|quot|amp);;/ ) {
 		return 0;
 	}
 
@@ -349,7 +351,7 @@ sub parseOvfProperties ( \@ ) {
 				die;
 			}
 
-			if ( !isSaneDoubleParens( $value ) ) {
+			if ( !isSaneDoubleSemicolon( $value ) ) {
 				Sys::Syslog::syslog( 'warning', "$action WARNING: Possible missed grouping; expecting ' ;; ' ($value)" );
 			}
 			
@@ -489,6 +491,14 @@ sub propertiesGetCurrent ( \% ) {
 	if ( -e $getOvfDefaults ) {
 		tie @currentOvfProperties, 'Tie::File', $getOvfDefaults, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open OVF Defaults Properties file [ $getOvfDefaults ] ($?:$!)} ) and die );
 		Sys::Syslog::syslog( 'info', qq{$action Using OVF Defaults Properties found in file [ $getOvfDefaults ]} );
+		my @currentOvfEnvProperties = qx{ $getOvfCmd };
+		if ( !@currentOvfEnvProperties ) {
+			Sys::Syslog::syslog( 'warning', qq{$action Couldn't retrieve OVF Properties using [ $getOvfCmd ] ($?:$!)} );
+		} elsif ( isOvfEnvChanged( \@currentOvfEnvProperties ) ) {
+			Sys::Syslog::syslog( 'info', qq{$action OVF Environment Properties differ; OVERRIDING [ $getOvfDefaults ]} );
+			$overrideOvfDefaults = 1;
+			@currentOvfProperties = @currentOvfEnvProperties;
+		}
 	} else {
 		@currentOvfProperties = qx{ $getOvfCmd } or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't retrieve OVF Properties using [ $getOvfCmd ] ($?:$!)} ) and die );
 		Sys::Syslog::syslog( 'info', qq{$action Using OVF Properties fetched from [ $getOvfCmd ]} );
@@ -530,6 +540,39 @@ sub propertiesGetCurrent ( \% ) {
 
 }
 
+sub isOvfEnvChanged ( \@ ) {
+
+	my $currentOvfEnvProperties = shift;
+	my $thisSubName = ( caller( 0 ) )[ 3 ];
+
+	my $action = "$thisSubName";
+
+	my $previousPath = qq{$ovfPath-$ovfEnvName};
+	
+	my $changed = 0;
+	my @previousOvfEnvProperties;
+
+	Sys::Syslog::syslog( 'info', qq{$action ... } );
+
+	# If no previous then leave NONEXISTENT, otherwise use previous
+	if ( -e $previousPath ) {
+		tie @previousOvfEnvProperties, 'Tie::File', $previousPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open $previousPath ($?:$!)} ) and die );
+		my $current  = parseOvfProperties( @{$currentOvfEnvProperties} );
+		my $previous = parseOvfProperties( @previousOvfEnvProperties );
+		my $currentMd5  = Digest::MD5::md5_hex( printOvfProperties( '',  %{$current} ) );
+		my $previousMd5 = Digest::MD5::md5_hex( printOvfProperties( '',  %{$previous} ) );
+		if ( $currentMd5 ne $previousMd5 ) {
+			$changed = 1;
+			Sys::Syslog::syslog( 'info', qq{$action PREVIOUS OVF ENVIRONMENT PROPERTIES FILE [ $previousPath ] DIFFERS FROM CURRENT ENVIRONMENT PROPERTIES} );
+		} else {
+			Sys::Syslog::syslog( 'info', qq{$action PREVIOUS OVF ENVIRONMENT PROPERTIES FILE [ $previousPath ] SAME AS CURRENT ENVIRONMENT PROPERTIES} );
+		}
+	} else {
+		Sys::Syslog::syslog( 'info', qq{$action NO PREVIOUS OVF ENVIRONMENT PROPERTIES FILE FOUND NAMED [ $previousPath ]} );
+	}
+	return $changed;
+}
+
 sub propertiesGetPrevious ( $\% ) {
 
 	my $appliedType = shift;
@@ -549,7 +592,6 @@ sub propertiesGetPrevious ( $\% ) {
 		$options->{ovf}{previous} = parseOvfProperties( @previousOvfProperties );
 		dbg_hash('Previous Properties', $options->{ovf}{previous});
 	} else {
-
 		# 'previous' may have been set from previous groups, like 'network' so clear out since not previous settings for this current group.
 		delete( $options->{ovf}{previous} );
 		Sys::Syslog::syslog( 'info', qq{$action NO PREVIOUS OVF PROPERTIES FILE FOUND NAMED [ $previousPath ]; ASSUMING INITILIZATION} );
@@ -636,12 +678,33 @@ sub propertiesSave ( $\% ) {
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
 
 	my $action = "$thisSubName ($saveType)";
+	my $ovfDefaults = $OVF::Vars::Common::sysVars{'fvorge'}{'ovf-defaults'};	
 
-	die if ( !@currentOvfProperties );
+	if ( !@currentOvfProperties ) {
+	    Sys::Syslog::syslog( 'err', qq{$action No current OVF properties provided ($?:$!)} );
+	    die;
+	}
 
-	my $currentPath       = qq{$ovfPath-$saveType};
-	my $currentParsedPath = qq{$ovfPath-$saveType-parsed};
+	my $currentPath          = qq{$ovfPath-$saveType};
+	my $currentParsedPath    = qq{$ovfPath-$saveType-parsed};
+	my $ovfEnvPath           = qq{$ovfPath-$ovfEnvName};
+	
 	my @printedCurrentProperties;
+	
+	# If ovfEnv doesn't exist then create. Also overwrite if $overrideOvfDefaults true
+	# so that the default file will be in sync with the ovfEnv.
+	if ( !-e $ovfEnvPath or $overrideOvfDefaults ) {
+		Sys::Syslog::syslog( 'err', qq{$action Creating or Updating OVF Environment Properties file [ $ovfEnvPath ] with current OVF Environment Properties} );
+		open( 'OVFPW', '>', $ovfEnvPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Environment Properties file [ $ovfEnvPath ] ($?:$!)} ) and die );
+		print OVFPW join( "\n", @currentOvfProperties );
+		close OVFPW;
+		if ( $overrideOvfDefaults ) {
+			Sys::Syslog::syslog( 'err', qq{$action Updating OVF Defaults Properties file [ $ovfDefaults ] with *new* OVF Environment Properties} );
+			open( 'OVFPW', '>', $ovfDefaults ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Defaults Properties file [ $ovfDefaults ] ($?:$!)} ) and die );
+			print OVFPW join( "\n", @currentOvfProperties );
+			close OVFPW;
+		}
+	}
 
 	Sys::Syslog::syslog( 'info', qq{$action $currentPath} );
 	open( 'OVFPW', '>', $currentPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Properties file [ $currentPath ] ($?:$!)} ) and die );
