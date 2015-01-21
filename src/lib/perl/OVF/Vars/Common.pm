@@ -60,6 +60,7 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{extension} = '.fvor
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{path} = '/root/fvorge-properties';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{file} = 'ovf';
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{ovfEnv} = 'env';
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd}       = ' > /dev/null 2>&1';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietErrCmd}    = ' 2> /dev/null';

@@ -41,13 +41,13 @@ sub apply ( $$\% ) {
 	my $major  = $options{ovf}{current}{'host.major'};
 	my $minor  = $options{ovf}{current}{'host.minor'};
 
-	my $priorityExpect = 'before|after';
+	my $priorityExpect = 'before|before-always|after|after-always';
 
 	( Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: property Not defined} )                                and return ) if ( !defined $property );
 	( Sys::Syslog::syslog( 'info', qq{$action $property ::SKIP:: priority Not defined} )                      and return ) if ( !defined $priority );
 	( Sys::Syslog::syslog( 'info', qq{$action $property ($priority) ::SKIP:: ... OVF $property NOT DEFINED} ) and return ) if ( !defined $options{ovf}{current}{$property} );
 
-	if ( !OVF::State::ovfIsChanged( $property, %options ) ) {
+	if ( !isAlways( $priority ) and !OVF::State::ovfIsChanged( $property, %options ) ) {
 		Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: NO changes to apply; Current $property same as Previous property} );
 		return;
 	}
@@ -57,6 +57,7 @@ sub apply ( $$\% ) {
 		my $customPriority = lc( $options{ovf}{current}{$property}{$num}{priority} );
 		my $customAction   = $options{ovf}{current}{$property}{$num}{'action'};
 		my $expect         = $options{ovf}{current}{$property}{$num}{'expect'};
+		my $runExpect      = 0;
 
 		( Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority ::SKIP:: OVF priority NOT DEFINED} )         and next ) if ( !defined $customPriority );
 		( Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority ::SKIP:: OVF priority NOT $priorityExpect} ) and next ) if ( $customPriority !~ /^($priorityExpect)$/ );
@@ -65,22 +66,28 @@ sub apply ( $$\% ) {
 		if ( $customPriority eq $priority ) {
 
 			if ( !exists $options{ovf}{previous} ) {
-				Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction ...} );
-				OVF::Manage::Tasks::runExpect( $expect, $customAction, %options );
+				$runExpect = 1;
 			} elsif ( exists $options{ovf}{previous}{$property}{$num} ) {
-
 				my @previous = OVF::State::printOvfProperties( '', %{ $options{ovf}{previous}{$property}{$num} } );
 				my @current  = OVF::State::printOvfProperties( '', %{ $options{ovf}{current}{$property}{$num} } );
 				if ( Digest::MD5::md5_hex( @previous ) eq Digest::MD5::md5_hex( @current ) ) {
-					Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction (expect:$expect) ::SKIP:: Current properties same as Previous} );
-					next;
-				} else {
-					Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction ...} );
-					OVF::Manage::Tasks::runExpect( $expect, $customAction, %options );
+					if ( isAlways( $customPriority ) ) {
+						$runExpect = 1;
+					} else {
+						Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction  ::SKIP:: Current properties same as Previous} );
+						next;
+					}
 				}
 
-			} else {
-				Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction ...} );
+			}
+			
+			if ( $runExpect ) {
+				if ( defined $expect ) {
+					Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority (expect:$expect) :: $customAction ...} );
+				} else {
+					Sys::Syslog::syslog( 'info', qq{$action $property ($num) $priority :: $customAction ...} );
+				}
+				# If expect is undefined the function will assume '0'
 				OVF::Manage::Tasks::runExpect( $expect, $customAction, %options );
 			}
 
@@ -88,6 +95,15 @@ sub apply ( $$\% ) {
 
 	}
 
+}
+
+sub isAlways ( $ ) {
+	my $priority = shift;
+	my $isAlways = 0;
+	if ( defined $priority and $priority =~ /-always$/ ) {
+		$isAlways = 1;
+	}
+	return $isAlways;
 }
 
 1;

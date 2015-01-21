@@ -60,9 +60,15 @@ OVF::State::propertiesGetCurrent( %options );
 # IF YOU CHANGE THE ORDER OR ADD SERVICES CHECK OVF::State::propertiesGetGroup FOR CHANGES
 
 # Only run if changes by checking for previously saved 'properties-network|packages...' file
+Sys::Syslog::syslog( 'info', qq{FVORGE all START ...} );
 my $group = 'network';
 my $customGroup = 'custom.'.$group;
 my $action = "FVORGE $group";
+# Since custom apply wouldn't happen if the properties were previously applied
+# and the same as before, execute the *always* items before and after.
+Sys::Syslog::syslog( 'info', qq{$action APPLY $customGroup before-always ...} );
+OVF::Custom::Module::apply( $customGroup, 'before-always', %options );
+Sys::Syslog::syslog( 'info', qq{$action APPLY $customGroup before-always COMPLETE} );
 if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 
 	Sys::Syslog::syslog( 'info', qq{$action APPLY ...} );
@@ -80,6 +86,10 @@ if ( !OVF::State::propertiesApplied( $group, %options ) ) {
 } else {
 	Sys::Syslog::syslog( 'info', qq{$action ::SKIP:: PREVIOUSLY APPLIED} );
 }
+Sys::Syslog::syslog( 'info', qq{$action APPLY $customGroup after-always ...} );
+OVF::Custom::Module::apply( $customGroup, 'after-always', %options );
+Sys::Syslog::syslog( 'info', qq{$action APPLY $customGroup after-always COMPLETE} );
+Sys::Syslog::syslog( 'info', qq{FVORGE all COMPLETE} );
 
 1;
 
