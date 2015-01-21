@@ -205,7 +205,7 @@ sub normalizeYesNo ( $$ ) {
 	my $action      = $thisSubName;
 
 	# Return if certain key types have values outside y|n
-	my $requiredYesNo = '^(always|onboot|onparent|permit-root|pubkey-auth|gssapi-auth|rsa-auth|x11forwarding|tcpforwarding|password-auth|usepam)$';
+	my $requiredYesNo = '^(onboot|onparent|permit-root|pubkey-auth|gssapi-auth|rsa-auth|x11forwarding|tcpforwarding|password-auth|usepam)$';
 	return $item if ( $key ne '' and $key !~ /$requiredYesNo/ );
 
 	if ( $item =~ /^($yesRegex)$/i ) {
