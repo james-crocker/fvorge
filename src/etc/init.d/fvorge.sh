@@ -42,6 +42,8 @@ case "$1" in
 	else
 		RETVAL=2
 	fi
+	# let other services know that fvorge has finished its config
+	initctl emit fvorge-started
 	echo
 	;;
   *)
