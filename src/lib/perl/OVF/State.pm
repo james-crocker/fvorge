@@ -40,6 +40,8 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 my $propertiesPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{path};
 my $propertiesFile = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{file};
 my $ovfEnvName     = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{ovfEnv};
+my $ovfEnvVcenter  = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{vcenter};
+my $vmtoolUpdated = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{vmtool}{updated}{path};
 
 my $ovfPath = qq{$propertiesPath/$propertiesFile};
 
@@ -47,6 +49,8 @@ my $ovfPath = qq{$propertiesPath/$propertiesFile};
 my @currentOvfProperties;
 my @previousOvfProperties;
 my $overrideOvfDefaults = 0;
+my $updateOvfEnvFiles = 0;
+my $updateOvfEnvVcenterFiles = 0;
 my $originalsPath = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{path};
 
 my $groupedProperties = q{^(network\.if|network\.alias|network\.bond|storage\.(fs|lvm)|service\.security\.ssh\.user\.config|custom\..+)$};
@@ -482,25 +486,35 @@ sub propertiesGetCurrent ( \% ) {
 
 	my $action = $thisSubName;
 
-	my $getOvfCmd      = $OVF::Vars::Common::getOvfPropertiesCmd;
-	my $getOvfDefaults = $OVF::Vars::Common::sysVars{'fvorge'}{'ovf-defaults'};
-
-	my $halt = 0;
+	my $getOvfCmd         = $OVF::Vars::Common::getOvfPropertiesCmd;
+	my $ovfDefaultsPath   = $OVF::Vars::Common::sysVars{'fvorge'}{'ovf-defaults'};
+	my $ovfEnvVcenterPath = qq{$ovfPath-$ovfEnvVcenter};
+	
 	Sys::Syslog::syslog( 'info', qq{$action ... } );
+	
+	# Get vmtoolsd ovf properties for comparison or current or die.
+	my @currentOvfEnvProperties = qx{ $getOvfCmd } or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't retrieve OVF Environment Properties using [ $getOvfCmd ] ($?:$!)} ) and die );
 
-	if ( -e $getOvfDefaults ) {
-		tie @currentOvfProperties, 'Tie::File', $getOvfDefaults, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open OVF Defaults Properties file [ $getOvfDefaults ] ($?:$!)} ) and die );
-		Sys::Syslog::syslog( 'info', qq{$action Using OVF Defaults Properties found in file [ $getOvfDefaults ]} );
-		my @currentOvfEnvProperties = qx{ $getOvfCmd };
-		if ( !@currentOvfEnvProperties ) {
-			Sys::Syslog::syslog( 'warning', qq{$action Couldn't retrieve OVF Properties using [ $getOvfCmd ] ($?:$!)} );
-		} elsif ( isOvfEnvChanged( \@currentOvfEnvProperties ) ) {
-			Sys::Syslog::syslog( 'info', qq{$action OVF Environment Properties differ; OVERRIDING [ $getOvfDefaults ]} );
-			$overrideOvfDefaults = 1;
+	# Determine vCenter has pushed changes and handle accordingly
+	if ( !-e $vmtoolUpdated and -e $ovfEnvVcenterPath ) {
+		tie @currentOvfProperties, 'Tie::File', $ovfEnvVcenterPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open vCenter OVF Environment Properties file [ $ovfEnvVcenterPath ] ($?:$!)} ) and die );
+		Sys::Syslog::syslog( 'info', qq{$action Using vCenter OVF Environment Properties found in file [ $ovfEnvVcenterPath ]} );
+		if ( isOvfEnvChanged( \@currentOvfEnvProperties ) ) {
+			Sys::Syslog::syslog( 'info', qq{$action OVF Environment Properties differ; OVERRIDING with vCenter OVF Properties} );
+			$updateOvfEnvFiles = 1;
+			$updateOvfEnvVcenterFiles = 1;
+			@currentOvfProperties = @currentOvfEnvProperties;
+		}
+	} elsif ( -e $ovfDefaultsPath ) {
+		tie @currentOvfProperties, 'Tie::File', $ovfDefaultsPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open OVF Defaults Properties file [ $ovfDefaultsPath ] ($?:$!)} ) and die );
+		Sys::Syslog::syslog( 'info', qq{$action Using OVF Defaults Properties found in file [ $ovfDefaultsPath ]} );
+		if ( isOvfEnvChanged( \@currentOvfEnvProperties ) ) {
+			Sys::Syslog::syslog( 'info', qq{$action OVF Environment Properties differ; OVERRIDING [ $ovfDefaultsPath ]} );
+			$updateOvfEnvFiles = 1;
 			@currentOvfProperties = @currentOvfEnvProperties;
 		}
 	} else {
-		@currentOvfProperties = qx{ $getOvfCmd } or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't retrieve OVF Properties using [ $getOvfCmd ] ($?:$!)} ) and die );
+		@currentOvfProperties = @currentOvfEnvProperties;
 		Sys::Syslog::syslog( 'info', qq{$action Using OVF Properties fetched from [ $getOvfCmd ]} );
 	}
 
@@ -547,30 +561,49 @@ sub isOvfEnvChanged ( \@ ) {
 
 	my $action = "$thisSubName";
 
-	my $previousPath = qq{$ovfPath-$ovfEnvName};
+	my $previousPath        = qq{$ovfPath-$ovfEnvName}; # 'normal' operation (all group/appliedType)
+	my $previousVcenterPath = qq{$ovfPath-$ovfEnvVcenter}; # 'vCenter' state
 	
-	my $changed = 0;
 	my @previousOvfEnvProperties;
 
 	Sys::Syslog::syslog( 'info', qq{$action ... } );
 
-	# If no previous then leave NONEXISTENT, otherwise use previous
-	if ( -e $previousPath ) {
+	# If vmtools not updated while running and previous vcenter save; precedence over others. vCenter is master.
+	if ( !-e $vmtoolUpdated and -e $previousVcenterPath ) {
+		tie @previousOvfEnvProperties, 'Tie::File', $previousPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open $previousVcenterPath ($?:$!)} ) and die );
+		my $current  = parseOvfProperties( @{$currentOvfEnvProperties} );
+		my $previous = parseOvfProperties( @previousOvfEnvProperties );
+		my $currentMd5  = Digest::MD5::md5_hex( printOvfProperties( '',  %{$current} ) );
+		my $previousMd5 = Digest::MD5::md5_hex( printOvfProperties( '',  %{$previous} ) );
+		if ( $currentMd5 ne $previousMd5 ) {
+			Sys::Syslog::syslog( 'info', qq{$action PREVIOUS VCENTER OVF ENVIRONMENT PROPERTIES FILE [ $previousVcenterPath ] DIFFERS FROM CURRENT ENVIRONMENT PROPERTIES} );
+			# A change from vCenter is master.
+			return 1;
+		} else {
+			Sys::Syslog::syslog( 'info', qq{$action PREVIOUS VCENTER OVF ENVIRONMENT PROPERTIES FILE [ $previousVcenterPath ] SAME AS CURRENT ENVIRONMENT PROPERTIES} );
+		}
+	} else {
+		Sys::Syslog::syslog( 'info', qq{$action NO PREVIOUS VCENTER OVF ENVIRONMENT PROPERTIES FILE FOUND NAMED [ $previousVcenterPath ] OR [ $vmtoolUpdated ] EXISTS} );
+	}
+	
+	# If no changes from vCenter; any changes from other sources
+	if ( -e $previousPath ) { 
 		tie @previousOvfEnvProperties, 'Tie::File', $previousPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open $previousPath ($?:$!)} ) and die );
 		my $current  = parseOvfProperties( @{$currentOvfEnvProperties} );
 		my $previous = parseOvfProperties( @previousOvfEnvProperties );
 		my $currentMd5  = Digest::MD5::md5_hex( printOvfProperties( '',  %{$current} ) );
 		my $previousMd5 = Digest::MD5::md5_hex( printOvfProperties( '',  %{$previous} ) );
 		if ( $currentMd5 ne $previousMd5 ) {
-			$changed = 1;
 			Sys::Syslog::syslog( 'info', qq{$action PREVIOUS OVF ENVIRONMENT PROPERTIES FILE [ $previousPath ] DIFFERS FROM CURRENT ENVIRONMENT PROPERTIES} );
+			return 1;
 		} else {
 			Sys::Syslog::syslog( 'info', qq{$action PREVIOUS OVF ENVIRONMENT PROPERTIES FILE [ $previousPath ] SAME AS CURRENT ENVIRONMENT PROPERTIES} );
 		}
 	} else {
 		Sys::Syslog::syslog( 'info', qq{$action NO PREVIOUS OVF ENVIRONMENT PROPERTIES FILE FOUND NAMED [ $previousPath ]} );
 	}
-	return $changed;
+	
+	return 0;
 }
 
 sub propertiesGetPrevious ( $\% ) {
@@ -586,7 +619,7 @@ sub propertiesGetPrevious ( $\% ) {
 
 	Sys::Syslog::syslog( 'info', qq{$action ... } );
 
-	# If no previous then leave NONEXISTENT, otherwise use previous
+	# If no previous then leave non-existent, otherwise use previous
 	if ( -e $previousPath ) {
 		tie @previousOvfProperties, 'Tie::File', $previousPath, autochomp => 1 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't open $previousPath ($?:$!)} );
 		$options->{ovf}{previous} = parseOvfProperties( @previousOvfProperties );
@@ -678,7 +711,9 @@ sub propertiesSave ( $\% ) {
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
 
 	my $action = "$thisSubName ($saveType)";
-	my $ovfDefaults = $OVF::Vars::Common::sysVars{'fvorge'}{'ovf-defaults'};	
+	my $ovfDefaults = $OVF::Vars::Common::sysVars{'fvorge'}{'ovf-defaults'};
+	my $setOvfCmd   = $OVF::Vars::Common::setOvfPropertiesCmd;
+	my $setOvfArg   = $OVF::Vars::Common::setOvfPropertiesArg;
 
 	if ( !@currentOvfProperties ) {
 	    Sys::Syslog::syslog( 'err', qq{$action No current OVF properties provided ($?:$!)} );
@@ -688,34 +723,55 @@ sub propertiesSave ( $\% ) {
 	my $currentPath          = qq{$ovfPath-$saveType};
 	my $currentParsedPath    = qq{$ovfPath-$saveType-parsed};
 	my $ovfEnvPath           = qq{$ovfPath-$ovfEnvName};
+	my $ovfEnvVcenterPath    = qq{$ovfPath-$ovfEnvVcenter};
 	
 	my @printedCurrentProperties;
 	
-	# If ovfEnv doesn't exist then create. Also overwrite if $overrideOvfDefaults true
-	# so that the default file will be in sync with the ovfEnv.
-	if ( !-e $ovfEnvPath or $overrideOvfDefaults ) {
-		Sys::Syslog::syslog( 'err', qq{$action Creating or Updating OVF Environment Properties file [ $ovfEnvPath ] with current OVF Environment Properties} );
-		open( 'OVFPW', '>', $ovfEnvPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Environment Properties file [ $ovfEnvPath ] ($?:$!)} ) and die );
-		print OVFPW join( "\n", @currentOvfProperties );
-		close OVFPW;
-		if ( $overrideOvfDefaults ) {
-			Sys::Syslog::syslog( 'err', qq{$action Updating OVF Defaults Properties file [ $ovfDefaults ] with *new* OVF Environment Properties} );
-			open( 'OVFPW', '>', $ovfDefaults ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Defaults Properties file [ $ovfDefaults ] ($?:$!)} ) and die );
-			print OVFPW join( "\n", @currentOvfProperties );
-			close OVFPW;
-		}
+	# If ovf-vcenter doesn't exist then create; saving the first apply (vcenter state)
+	if ( !-e $ovfEnvVcenterPath or $updateOvfEnvVcenterFiles ) {
+		Sys::Syslog::syslog( 'info', qq{$action Creating or Updating vCenter OVF Environment Properties file [ $ovfEnvVcenterPath ] with current OVF Environment Properties} );
+		open( 'OVF1', '>', $ovfEnvVcenterPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save vCenter OVF Environment Properties file [ $ovfEnvVcenterPath ] ($?:$!)} ) and die );
+		print OVF1 @currentOvfProperties;
+		close OVF1;
 	}
-
+	
+	# Save vCenter master override changes to the OvfDefaults if there is an OvfDefaults
+	if ( -e $ovfDefaults and $updateOvfEnvFiles ) {
+		Sys::Syslog::syslog( 'info', qq{$action Updating OVF Defaults Properties file [ $ovfDefaults ] with *new* OVF Environment Properties} );
+		open( 'OVF2', '>', $ovfDefaults ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Defaults Properties file [ $ovfDefaults ] ($?:$!)} ) and die );
+		print OVF2 @currentOvfProperties;
+		close OVF2;
+	}
+	
+	# Save by group/appliedType (always save)
 	Sys::Syslog::syslog( 'info', qq{$action $currentPath} );
-	open( 'OVFPW', '>', $currentPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Properties file [ $currentPath ] ($?:$!)} ) and die );
-	print OVFPW join( "\n", @currentOvfProperties );
-	close OVFPW;
+	open( 'OVF3', '>', $currentPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Properties file [ $currentPath ] ($?:$!)} ) and die );
+	print OVF3 @currentOvfProperties;
+	close OVF3;
 
+	# Save by group/appliedType (parsed) (always save)
 	Sys::Syslog::syslog( 'info', qq{$action $currentParsedPath} );
 	@printedCurrentProperties = printOvfProperties( '', %{ $options->{ovf}{current} } );
-	open( 'OVFPW', '>', $currentParsedPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save PARSED OVF Properties file [ $currentParsedPath ] ($?:$!)} ) and die );
-	print OVFPW join( "\n", @printedCurrentProperties );
-	close OVFPW;
+	open( 'OVF4', '>', $currentParsedPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save PARSED OVF Properties file [ $currentParsedPath ] ($?:$!)} ) and die );
+	print OVF4 join( "\n", @printedCurrentProperties );
+	close OVF4;
+	
+	# If ovf-env (normal operations) (always save)
+	if ( !-e $ovfEnvPath ) {
+		Sys::Syslog::syslog( 'info', qq{$action Creating or Updating OVF Environment Properties file [ $ovfEnvPath ] with current OVF Environment Properties} );
+		open( 'OVF5', '>', $ovfEnvPath ) or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't save OVF Environment Properties file [ $ovfEnvPath ] ($?:$!)} ) and die );
+		print OVF5 @currentOvfProperties;
+		close OVF5;
+	}
+	
+	# Update the vmtoolsd space from the ovfEnvPath (easier than dealing with in-memory)
+	my $setCmd = qq{$setOvfCmd "$setOvfArg `cat $ovfEnvPath`"};
+	Sys::Syslog::syslog( 'info', qq{$action Updating vmtools space [ $setCmd ] with current OVF Environment Properties} );
+	system(qq{$setCmd}) == 0 or Sys::Syslog::syslog( 'warning', qq{$action Couldn't update vmtools space [ $setCmd ] ($?:$!)} );
+		
+	# Flag that vmtool updated (persist in /tmp until system restarts)
+	open( TMPFILE, '>', $vmtoolUpdated ) or Sys::Syslog::syslog( 'warning', qq{$action Couldn't flag vmtool updated file [ $vmtoolUpdated ] ($?:$!)} );
+	close( TMPFILE );
 
 }
 
