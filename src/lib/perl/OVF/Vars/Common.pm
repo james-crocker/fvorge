@@ -27,6 +27,8 @@ use SIOS::SysInfo;
 
 # VMware tool to fetch OVF properties (from VMwareTOOLS being installed NOT an iso mount)
 our $getOvfPropertiesCmd = q{vmtoolsd --cmd "info-get guestinfo.ovfenv"};
+our $setOvfPropertiesCmd = q{vmware-rpctool};
+our $setOvfPropertiesArg = 'info-set guestinfo.ovfEnv';
 
 ## Sys Specifics -------------------------------------
 our $sysDistro  = $SIOS::SysInfo::distro;
@@ -61,6 +63,9 @@ $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{originals}{extension} = '.fvor
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{path} = '/root/fvorge-properties';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{file} = 'ovf';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{ovfEnv} = 'env';
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{save}{properties}{vcenter} = 'vcenter';
+
+$sysCmds{$sysDistro}{$sysVersion}{$sysArch}{vmtool}{updated}{path} = '/tmp/vmtool-updated';
 
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd}       = ' > /dev/null 2>&1';
 $sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietErrCmd}    = ' 2> /dev/null';
