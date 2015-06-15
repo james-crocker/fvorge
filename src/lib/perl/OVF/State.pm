@@ -549,8 +549,6 @@ sub isOvfEnvChanged ( \@ ) {
 	my $previousPath        = qq{$ovfPath-$ovfEnvName}; # 'normal' operation (all group/appliedType)
 	my $previousVcenterPath = qq{$ovfPath-$ovfEnvVcenter}; # 'vCenter' state
 	
-	my @previousOvfEnvProperties;
-
 	Sys::Syslog::syslog( 'info', qq{$action ... } );
 	
 	# If no vmtoolUpdated; we assume that the ovf environment properties are those set from vCenter. If
@@ -559,55 +557,69 @@ sub isOvfEnvChanged ( \@ ) {
 	# current; then vCenter had changes - override all previous. If no vmtoolUpdated and previousVcenterPath
 	# same as current, then see if ovf-defaults in play.
 
-	# No vmtoolUpdated
-	if ( !-e $vmtoolUpdated and -e $previousVcenterPath ) {
-		tie @previousOvfEnvProperties, 'Tie::File', $previousVcenterPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open $previousVcenterPath ($?:$!)} ) and die );
-		my $current  = parseOvfProperties( @{$currentOvfEnvProperties} );
-		my $previous = parseOvfProperties( @previousOvfEnvProperties );
-		my $currentMd5  = Digest::MD5::md5_hex( printOvfProperties( '',  %{$current} ) );
-		my $previousMd5 = Digest::MD5::md5_hex( printOvfProperties( '',  %{$previous} ) );
-		if ( $currentMd5 ne $previousMd5 ) {
-			Sys::Syslog::syslog( 'info', qq{$action Previous vCenter OVF environment properties file [ $previousVcenterPath ] DIFFERS from current environment properties} );
-			# A change from vCenter is master. Set flags to update all previous
-			# ovf env files.
-			$updateOvfEnvFiles = 1;
-			$updateOvfEnvVcenterFiles = 1;
-			return 1;
-		} else {
-			Sys::Syslog::syslog( 'info', qq{$action Previous vCenter OVF environment properties file [ $previousVcenterPath ] SAME as current environment properties} );
-			# Likely after a shutdown; current *will* be different from the $prviousPath
-			# As no changes from vCenter; update vmtool with $previousPath if exists so
-			# that the next check on $previousPath will equal current (ie. return 0)
-			if ( -e $previousPath ) {
-				Sys::Syslog::syslog( 'info', qq{$action Update vmtool environment with previous [ $previousPath ]; recovering from shutdown} );
-				updateVmtool($previousPath);
+	if ( defined $currentOvfEnvProperties ) {
+		# No vmtoolUpdated
+		if ( !-e $vmtoolUpdated and -e $previousVcenterPath ) {
+			if ( md5Matches( $previousVcenterPath, $currentOvfEnvProperties ) ) {
+				# Likely after a shutdown; current *will* be different from the $prviousPath
+				# As no changes from vCenter; update vmtool with $previousPath if exists so
+				# that the next check on $previousPath will equal current (ie. return 0)
+				if ( -e $previousPath ) {
+					Sys::Syslog::syslog( 'info', qq{$action Update vmtool environment with previous [ $previousPath ]; recovering from shutdown} );
+					updateVmtool($previousPath);
+				}
+			} else {
+				# A change from vCenter is master. Set flags to update all previous
+				# ovf env files.
+				$updateOvfEnvFiles = 1;
+				$updateOvfEnvVcenterFiles = 1;
+				return 1;
 			}
 		}
-	} else {
-		Sys::Syslog::syslog( 'info', qq{$action NO previous vCenter OVF environment properties file [ $previousVcenterPath ] OR [ $vmtoolUpdated ] exists} );
-	}
-	
-	# If no changes from vCenter; any changes from other sources
-	if ( -e $previousPath ) { 
-		tie @previousOvfEnvProperties, 'Tie::File', $previousPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open $previousPath ($?:$!)} ) and die );
-		my $current  = parseOvfProperties( @{$currentOvfEnvProperties} );
-		my $previous = parseOvfProperties( @previousOvfEnvProperties );
-		my $currentMd5  = Digest::MD5::md5_hex( printOvfProperties( '',  %{$current} ) );
-		my $previousMd5 = Digest::MD5::md5_hex( printOvfProperties( '',  %{$previous} ) );
-		if ( $currentMd5 ne $previousMd5 ) {
-			Sys::Syslog::syslog( 'info', qq{$action Previous OVF environment properties file [ $previousPath ] DIFFERS from current environment properties} );
+
+		if ( md5Matches( $previousPath, $currentOvfEnvProperties ) ) {
+			return 0;
+		} else {
 			# Set flag to update previous ovf-env file
 			$updateOvfEnvFiles = 1;
 			return 1;
-		} else {
-			Sys::Syslog::syslog( 'info', qq{$action Previous OVF environment properties file [ $previousPath ] SAME as current environment properties} );
 		}
-	} else {
-		Sys::Syslog::syslog( 'info', qq{$action NO Previous OVF environment properties file [ $previousPath ] exists} );
 	}
 	
 	# no changes, or first time since no previous properties files
 	return 0;
+}
+
+sub md5Matches(\$\@) {
+	
+	my $previousOvfEnvPath      = shift;
+	my $currentOvfEnvProperties = shift;
+	
+	my $thisSubName = ( caller( 0 ) )[ 3 ];
+
+	my $action = "$thisSubName";
+	
+	my @previousOvfEnvProperties;
+	
+	# Check the current against the previous; returning true if not equal. Ordering through printOvfProperties assures ordering for consistent md5 matching.
+	if ( -e $previousOvfEnvPath  and defined $currentOvfEnvProperties ) {
+		tie @previousOvfEnvProperties, 'Tie::File', $previousOvfEnvPath, autochomp => 1 or ( Sys::Syslog::syslog( 'err', qq{$action Couldn't open $previousOvfEnvPath ($?:$!)} ) and die );
+		my $current  = parseOvfProperties( @{$currentOvfEnvProperties} );
+		my $previous = parseOvfProperties( @previousOvfEnvProperties );
+		my $currentMd5  = Digest::MD5::md5_hex( printOvfProperties( '',  %{$current} ) );
+		my $previousMd5 = Digest::MD5::md5_hex( printOvfProperties( '',  %{$previous} ) );
+		if ( $currentMd5 eq $previousMd5 ) {
+			Sys::Syslog::syslog( 'info', qq{$action Previous OVF environment properties file [ $previousOvfEnvPath ] SAME from current environment properties} );
+			return 1;
+		} else {
+			Sys::Syslog::syslog( 'info', qq{$action Previous OVF environment properties file [ $previousOvfEnvPath ] DIFFERS from current environment properties} );
+		}
+	} else {
+		Sys::Syslog::syslog( 'info', qq{$action NO Previous OVF environment properties file [ $previousOvfEnvPath ] exists} );
+	}
+	
+	return 0;
+	
 }
 
 sub propertiesGetPrevious ( $\% ) {
