@@ -80,6 +80,8 @@ my $cluster;
 my $net;
 my $overwrite;
 my $verbose = 0;
+my $sslVerify = 0;
+my $ovaPackage;
 
 ## Getopts ----------------------------------------------
 Getopt::Long::GetOptions(
@@ -113,7 +115,9 @@ Getopt::Long::GetOptions(
 	'snapshotdescription|sd=s' => \$snapshotDescription,
 	'snapshotmemory|sm!'       => \$snapshotMemory,
 	'snapshotquiesce|sq!'      => \$snapshotQuiesce,
-	'verbose|v!'               => \$verbose
+	'verbose|v!'               => \$verbose,
+	'sslverify!'               => \$sslVerify,
+	'ovapackage|op=s'          => \$ovaPackage
 ) or pod2usage( -verbose => 1, -exitstatus => 2 );
 
 pod2usage( -verbose => 3, -exitstatus => 0 ) if $help;
@@ -147,6 +151,8 @@ $options{snapshotdescription} = $snapshotDescription;
 $options{snapshotmemory}      = $snapshotMemory;
 $options{snapshotquiesce}     = $snapshotQuiesce;
 $options{verbose}             = $verbose;
+$options{sslverify}           = $sslVerify;
+$options{ovapackage}          = $ovaPackage;
 
 my $actionRegex   = $OVF::Automation::Vars::actionRegex;
 my $powerRegex    = $OVF::Automation::Vars::powerRegex;
@@ -154,6 +160,8 @@ my $deviceRegex   = $OVF::Automation::Vars::deviceRegex;
 my $snapshotRegex = $OVF::Automation::Vars::snapshotRegex;
 my $deployName    = $OVF::Automation::Vars::deployName;
 my $destroyName   = $OVF::Automation::Vars::destroyName;
+my $exportName    = $OVF::Automation::Vars::exportName;
+my $discoverName  = $OVF::Automation::Vars::discoverName;
 
 if ( !defined $action or $action !~ /^($actionRegex)$/ ) {
 	push( @useError, "--action $actionRegex required\n" );
@@ -165,11 +173,20 @@ OVF::Automation::Module::handleUseError( @useError );
 # the envirionment variables.
 setVcenterCredentials( \%options );
 
-OVF::Automation::Module::deploy( %options )  if ( $action =~ /^$deployName$/ );
-OVF::Automation::Module::destroy( %options ) if ( $action =~ /^$destroyName$/ );
-OVF::Automation::Module::power( %options ) if ( $action =~ /^($powerRegex)$/ );
-OVF::Automation::Module::device( %options ) if ( $action =~ /^($deviceRegex)$/ );
-OVF::Automation::Module::snapshot( %options ) if ( $action =~ /^($snapshotRegex)$/ );
+my $status = undef;
+$status = OVF::Automation::Module::deploy( %options )  if ( $action =~ /^$deployName$/ );
+$status = OVF::Automation::Module::destroy( %options ) if ( $action =~ /^$destroyName$/ );
+$status = OVF::Automation::Module::power( %options ) if ( $action =~ /^($powerRegex)$/ );
+$status = OVF::Automation::Module::device( %options ) if ( $action =~ /^($deviceRegex)$/ );
+$status = OVF::Automation::Module::snapshot( %options ) if ( $action =~ /^($snapshotRegex)$/ );
+$status = OVF::Automation::Module::export( %options ) if ( $action =~ /^$exportName$/ );
+$status = OVF::Automation::Module::discover( %options ) if ( $action =~ /^$discoverName$/ );
+
+if ( $status ) {
+	exit 0;
+} else {
+	exit 1;
+}
 
 sub setVcenterCredentials( \% ) {
 
@@ -200,11 +217,34 @@ VM lifecycles include B<power> operations, B<snapshot> operations and B<attach> 
 
 VMware vCenter details and VM guest name are B<I<required>> for all management operations and actions. See B<I<REQUIRED>> section.
 
+=head2 DISCOVER
+
+=over 4
+
+=item fvorge-manage B<--action|-a>=I<discover> I<REQUIRED>
+
+Discover the objects for a given vCenter Server environment.
+
+=back
+
+=head2 EXPORT
+
+=over 4
+
+=item fvorge-manage B<--action|-a>=I<export> I<REQUIRED> [--folder|-f=<NAME>] B<--ovapackage|-op>=I<PACAKGE_PATH_NAME>>
+
+The ovapackage is the path B<and> OVA package name for the exported vm OVA. eg. /tmp/vm12.ova
+If no path provided, the export will abort. It will not save to the current working directory unless explicit as by ./vm12.ova
+
+The vm must be in a poweredOff state to perform an OVA export.
+
+=back
+
 =head2 DEPLOY
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<deploy> I<REQUIRED> B<--sourceovf|-sovf>=I<URL> B<--datacenter|-dc>=I<NAME> B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME> [--cluster|-c=I<NAME>] [--net|n=I<SOURCE_NAME=TARGET_NAME>[;S=T[;S=T]] [--overwrite|-o] [--propoverride|-po=I<FILE|ovfprop=ovfvalue[;;;ovfprop=ovfvalue]>] [--diskmode|-dm=I<thin>] [--folder|-f=<NAME>]
+=item fvorge-manage B<--action|-a>=I<deploy> I<REQUIRED> <B<--sourceovf|-sovf>=I<URL> B<--datacenter|-dc>=I<NAME> B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME> [--cluster|-c=I<NAME>] [--net|n=I<SOURCE_NAME=TARGET_NAME>[;S=T[;S=T]] [--overwrite|-o] [--propoverride|-po=I<FILE|"ovfprop"="ovfvalue"[;;;"ovfprop=ovfvalue"]]> [--diskmode|-dm=I<thin>] [--folder|-f=<NAME>]
 
 =back
 
@@ -352,7 +392,7 @@ A VM guest name may be provided via B<--vmname|-vm> I<VM_Guest_Name> I<or> it ma
 
 Print help and exit.
 
-=item B<--action|-a> deploy|destroy|poweron|poweroff|suspend|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
+=item B<--action|-a> discover|deploy|destroy|export|poweron|poweroff|suspend|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
 
 Action to perform.
 
@@ -400,6 +440,11 @@ The VMware ESX Network to associate each VM guest network interface. Optional if
 
 The VMware Datacenter Folder to assign the VM guest. If provided the Folder B<must> exist. It will not be created.
 
+=item B<--ovapackage|-op>=I<PACAKGE_PATH_NAME>>
+
+The ovapackage is the path B<and> OVA package name for the exported vm OVA. eg. /tmp/vm12.ova
+If no path provided, the export will abort. It will not save to the current working directory unless explicit as by ./vm12.ova
+
 =item B<--overwrite|-o>
 
 Deploying an OVF/OVA will not overwrite an existing guest by the same name. Enable this option to overwrite an existing VM guest of the same name.
@@ -423,6 +468,10 @@ If provided and the state of the VM guest is B<poweredOn> then the memory state 
 =item B<--snapshotquiesce|-sq>
 
 If provided and the state of the VM guest is B<poweredOn> then the system will be quiesced for the snapshot.
+
+=item B<--sslverify>
+
+If provided will prompt to verify the ssl connection to the vCenter Server. Default is to skip the ssl verification.
 
 =item B<--vmdevice|-vd> iso|connectable
 

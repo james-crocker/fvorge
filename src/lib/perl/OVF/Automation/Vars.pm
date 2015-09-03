@@ -40,14 +40,18 @@ our $snapshotRevertName      = 'snapshot-revert';
 our $snapshotDestroyName     = 'snapshot-destroy';
 our $vmDeviceIsoName         = 'iso';
 our $vmDeviceConnectableName = 'connectable';
+our $exportName              = 'export';
+our $discoverName            = 'discover';
 our $powerRegex              = qq{$powerOnName|$powerOffName|$suspendName|$resetName|$rebootName|$shutdownName};
 our $deviceRegex             = qq{$deviceAttachName|$deviceDetachName|$deviceListName};
 our $snapshotRegex           = qq{$snapshotCreateName|$snapshotRevertName|$snapshotDestroyName};
 our $vmDeviceRegex           = qq{$vmDeviceIsoName|$vmDeviceConnectableName};
-our $actionRegex             = qq{$deployName|$destroyName|$powerRegex|$deviceRegex|$snapshotRegex};
+our $actionRegex             = qq{$deployName|$destroyName|$exportName|$discoverName|$powerRegex|$deviceRegex|$snapshotRegex};
 
 our $defaultOvftoolPath         = '/usr/bin/ovftool';
 our $defaultSnapshotDescription = 'FVORGE AUTOMATION';
+
+our $ovftoolNoSslVerify         = '--noSSLVerify';
 
 our $propOverrideSplitter       = q{\s*;;;\s*};
 

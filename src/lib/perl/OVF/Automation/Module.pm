@@ -47,6 +47,150 @@ my $sysArch    = $SIOS::CommonVars::sysArch;
 ## For surpressing stdout, stderr.
 my $quietCmd   = $OVF::Vars::Common::sysCmds{$sysDistro}{$sysVersion}{$sysArch}{quietCmd};
 
+# ovftool --noSSLverify
+my $ovftoolNoSslVerify = $OVF::Automation::Vars::ovftoolNoSslVerify;
+
+sub discover ( \% ) {
+
+	my ( %options ) = %{ ( shift ) };
+
+	my $thisSubName = ( caller( 0 ) )[ 3 ];
+
+	my $action = $thisSubName;
+	
+	my @useError;
+	my $ovftool   = $OVF::Automation::Vars::defaultOvftoolPath;
+	my $status    = 0;
+
+	my $vcenter   = $options{'vcenter'};
+	my $vcUser    = $options{'vcenteruser'};
+	my $vcPass    = $options{'vcenterpassword'};
+	my $sslVerify = $options{'sslverify'};
+	
+    # Validate correct set of arguments for this action.
+    push ( @useError, validateVcenterArguments( \%options ) );
+		
+    return $status if ( handleUseError( \@useError ) );
+	
+    if ( !defined $ovftool or !-x $ovftool ) {
+    	my $ovftool = 'ovftool' if ( !defined $ovftool );
+    	logMessage( $action, undef, 'err', 'skip', qq{NO executable ($ovftool) FOUND} );
+    	return 0;
+    }	
+    
+    # Create the first OVFTOOL discover cmd at the 'root'
+    my $discoverCmd = qq{$ovftool};	
+    $discoverCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );	
+    $discoverCmd .= qq{ vi://"$vcUser":"$vcPass"\@"$vcenter"};    
+	
+	logMessage( $action, undef, 'info', undef, qq{BEGIN} );	
+	getVcenterObjects( $discoverCmd, 0, $options{'verbose'}, undef );	
+	logMessage( $action, undef, 'info', undef, qq{END} );
+	$status = 1;
+	return $status;
+}  
+
+sub export ( \% ) {
+
+	my ( %options ) = %{ ( shift ) };
+
+	my $thisSubName = ( caller( 0 ) )[ 3 ];
+
+	my $action = $thisSubName;
+	
+	my @useError;
+	my $ovftool;
+	my $status = 0;
+
+	my $distro = $options{'distribution'};
+	my $major  = $options{'major'};
+	my $minor  = $options{'minor'};
+	my $arch   = $options{'architecture'};
+
+	my $vmName          = $options{'vmname'};
+	my $ovaPackage      = $options{'ovapackage'};
+	my $vcenter         = $options{'vcenter'};
+	my $vcUser          = $options{'vcenteruser'};
+	my $vcPass          = $options{'vcenterpassword'};
+	my $dataCenter      = $options{'datacenter'};
+	my $vmFolder        = $options{'folder'};
+	my $sslVerify       = $options{'sslverify'};
+	
+	# Validate correct set of arguments for this action.
+	push ( @useError, validateVcenterArguments( \%options ) );
+	push ( @useError, validateVmName( \$vmName, \%options ) );		
+	
+	if ( !defined $ovaPackage or $ovaPackage !~ /[\/][^\/]+$/) {
+		push( @useError, "--ovapackage required and must have a path and package name\n" );
+	}	
+
+	if ( !defined $dataCenter ) {
+		push( @useError, "--datacenter required\n" );
+	}
+	
+	if ( !defined $vmName ) {
+		push( @useError, "--vmname required\n" );
+	}
+	
+	# Verify the vmname exists
+	Util::connect( getVIRuntimeUrl( \%options ), $vcUser, $vcPass );
+	my $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'name' => $vmName});
+	if ( !defined $vm ) {
+		push( @useError, qq{UNABLE TO LOCATE VM ($vmName) AT VCENTER ($vcenter)\n} );
+	}
+	
+	# vm must be in poweredOff state
+    my $state = $vm->runtime->powerState->val;
+    if ( $state ne 'poweredOff' ) {
+    	push( @useError, qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state); VM MUST BE IN poweredOff state} );
+	}
+		
+	return $status if ( handleUseError( \@useError ) );
+	
+	# Don't depend on distribution arguments; unless available
+	if ( !defined $distro or !defined $major or !defined $minor or !defined $arch ) {
+		$ovftool = $OVF::Automation::Vars::defaultOvftoolPath;
+	} else {
+		$ovftool = $OVF::Automation::Vars::automate{$distro}{$major}{$minor}{$arch}{'bin'}{'ovftool'}{'path'};
+	}
+	
+	if ( !defined $ovftool or !-x $ovftool ) {
+		my $ovftool = 'ovftool' if ( !defined $ovftool );
+		logMessage( $action, undef, 'err', 'skip', qq{NO executable ($ovftool) FOUND} );
+		return $status;
+	}
+
+	# If in a folder set it for inclusion in the url.
+	if ( defined $vmFolder ) {
+		$vmFolder = qq{"$vmFolder"/};
+	} else {
+		$vmFolder = '';
+	}
+	
+	logMessage( $action, $vmName, 'info', undef, qq{BEGIN} );
+	
+	# Create the OVFTOOL export cmd
+	my $exportCmd = qq{$ovftool};
+	
+	$exportCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
+	
+	$exportCmd .= qq{ vi://"$vcUser":"$vcPass"\@"$vcenter"/"$dataCenter"/vm/$vmFolder"$vmName" '$ovaPackage'};
+    
+	$exportCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
+	print qq{EXPORT COMMAND:\n$exportCmd\n} if ( $options{'verbose'} );
+	if ( system( $exportCmd ) == 0 ) {
+		logMessage( $action, $vmName, 'info', 'success', undef );
+		$status = 1;
+	} else {
+		logMessage( $action, $vmName, 'err', 'error', qq{($exportCmd) ($?:$!)} );
+		$status = 0;
+	}
+	logMessage( $action, $vmName, 'info', undef, qq{END} );
+	
+	return $status;
+
+}
+
 sub deploy ( \% ) {
 
 	my ( %options ) = %{ ( shift ) };
@@ -57,6 +201,7 @@ sub deploy ( \% ) {
 	
 	my @useError;
 	my $ovftool;
+	my $status = 0;
 
 	my $distro = $options{'distribution'};
 	my $major  = $options{'major'};
@@ -77,6 +222,7 @@ sub deploy ( \% ) {
 	my $net             = $options{'net'};
 	my $overwrite       = $options{'overwrite'};
 	my $propoverride    = $options{'propoverride'};
+    my $sslVerify       = $options{'sslverify'};
 	
 	# Validate correct set of arguments for this action.
 	push ( @useError, validateVcenterArguments( \%options ) );
@@ -102,7 +248,7 @@ sub deploy ( \% ) {
 	# through validate functions before continuing. The ovftool outputs error if
 	# locator doesn't refer to an object - but parsing it is a bother.
 	
-	handleUseError( \@useError );
+	return $status if ( handleUseError( \@useError ) );
 
 	# Don't depend on distribution arguments; unless available
 	if ( !defined $distro or !defined $major or !defined $minor or !defined $arch ) {
@@ -114,7 +260,7 @@ sub deploy ( \% ) {
 	if ( !defined $ovftool or !-x $ovftool ) {
 		my $ovftool = 'ovftool' if ( !defined $ovftool );
 		logMessage( $action, undef, 'err', 'skip', qq{NO executable ($ovftool) FOUND} );
-		return;
+		return $status;
 	}
 	
 	# Get any OVF properties override values for the given sourceOvf.
@@ -129,7 +275,7 @@ sub deploy ( \% ) {
 				@propertiesToOverride = split( $OVF::Automation::Vars::propOverrideSplitter, $propoverride );
 			} else {
 				logMessage( $action, undef, 'err', 'skip', qq{NO PROPERTY FILE ($propoverride) FOUND *OR* OVF PROPERTIES NOT IDENTIFIED} );
-				return;
+				return $status;
 			}			
 		}
 		# Append/Prepend OVF properties for ovftool format
@@ -146,6 +292,8 @@ sub deploy ( \% ) {
 	
 	# Create the OVFTOOL deploy cmd
 	my $deployCmd = qq{$ovftool --acceptAllEulas}; #Accept ALL Eulas by default.
+	
+	$deployCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
 	
 	$deployCmd .= qq{ \\\n--name="$vmName"};
 	
@@ -190,12 +338,16 @@ sub deploy ( \% ) {
 	$deployCmd .= qq{ \\\nvi://"$vcUser":"$vcPass"\@"$vcenter"/"$dataCenter"/host/$cluster"$targetHost"};
 	$deployCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
 	print qq{DEPLOY COMMAND:\n$deployCmd\n} if ( $options{'verbose'} );
-	if ( system( $deployCmd ) == 0 ) {
+	if ( system ( $deployCmd ) == 0 ) {
 		logMessage( $action, $vmName, 'info', 'success', undef );
+		$status = 1;
 	} else {
 		logMessage( $action, $vmName, 'err', 'error', qq{($deployCmd) ($?:$!)} );
+		$status = 0;
 	}
 	logMessage( $action, $vmName, 'info', undef, qq{END} );
+	
+	return $status;
 
 }
 
@@ -208,6 +360,7 @@ sub destroy ( \% ) {
 	my $action = $thisSubName;
 	
 	my @useError;
+	my $status  = 0;
 
 	my $vmName  = $options{'vmname'};
 	my $vcenter = $options{'vcenter'};
@@ -218,20 +371,24 @@ sub destroy ( \% ) {
 	push ( @useError, validateVcenterArguments( \%options ) );
 	push ( @useError, validateVmName( \$vmName, \%options ) );
 	
-	handleUseError( \@useError );
+	return $status if ( handleUseError( \@useError ) );
 
 	logMessage( $action, $vmName, 'info', undef, qq{BEGIN} );
 	Util::connect( getVIRuntimeUrl( \%options ), $vcUser, $vcPass );
 	my $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'name' => $vmName});
 	if ( !defined $vm ) {
 		logMessage( $action, $vmName, 'err', 'error', qq{UNABLE TO LOCATE VM ($vmName) AT VCENTER ($vcenter)} );
+		$status = 0;
 	} else {		
 		my $task_ref = $vm->Destroy_Task();
 		logMessage( $action, $vmName, getVIRuntimeTaskStatus($task_ref) );
+		$status = 1;		
 	}
 	Util::disconnect();
 	logMessage( $action, $vmName, 'info', undef, qq{END} );
-
+	
+	return $status;
+	
 }
 
 sub power ( \% ) {
@@ -243,6 +400,7 @@ sub power ( \% ) {
 	my $action = $thisSubName;
 	
 	my @useError;
+	my $status = 0;
 
 	my $op = $options{'action'};
 	$action .= " ($op)";
@@ -255,16 +413,17 @@ sub power ( \% ) {
 	# Validate correct set of arguments for this action.
 	my $powerRegex = $OVF::Automation::Vars::powerRegex;
 	if ( $op !~ /^($powerRegex)$/ ) {
-		push ( @useError, '--action=$powerRegex required; got $op')
+		push ( @useError, qq{--action=$powerRegex required; got ($op)})
 	}
 	push ( @useError, validateVcenterArguments( \%options ) );
 	push ( @useError, validateVmName( \$vmName, \%options ) );
 	
-	handleUseError( \@useError );
+	return $status if ( handleUseError( \@useError ) );
 	
 	logMessage( $action, $vmName, 'info', undef, qq{BEGIN} );
 	Util::connect( getVIRuntimeUrl( \%options ), $vcUser, $vcPass );
 	my $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'config.name' => $vmName});
+	# status = 0 for all until set 1
 	if ( !defined $vm ) {
 		logMessage( $action, $vmName, 'warning', 'warning', qq{UNABLE TO LOCATE VM ($vmName) AT VCENTER ($vcenter)} );
 	} else {		
@@ -275,6 +434,7 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->PowerOnVM();
+				$status = 1;
 			}
 		}
 		# reset
@@ -283,6 +443,7 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->ResetVM();
+				$status = 1;
 			}
 		}
 		# standby
@@ -291,6 +452,7 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->StandbyGuest();
+				$status = 1;
 			}
 		}
 		# power off
@@ -299,6 +461,7 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->PowerOffVM();
+				$status = 1;
 			}
 		}
 		# suspend
@@ -307,6 +470,7 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->SuspendVM();
+				$status = 1;
 			}
 		}
 		# shutdown
@@ -315,6 +479,7 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->ShutdownGuest();
+				$status = 1;
 			}
 		}
 		# reboot
@@ -323,12 +488,15 @@ sub power ( \% ) {
 				logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
 			} else {
 				$vm->RebootGuest();
+				$status = 1;
 			}
 		}
 	}
 	logMessage( $action, $vmName, 'info', 'success', undef );
 	Util::disconnect();
 	logMessage( $action, $vmName, 'info', undef, qq{END} );
+	
+	return $status;
 
 }
 
@@ -351,13 +519,14 @@ sub device ( \% ) {
 	my $operation    = $options{'action'};
 	
 	my @useError;
-	my $attach = 0;
-	my $detach = 0;
-	my $list   = 0;
+	my $attach  = 0;
+	my $detach  = 0;
+	my $list    = 0;
+	my $status  = 0;
 
 	my $attachName    =  $OVF::Automation::Vars::deviceAttachName;
 	my $detachName    =  $OVF::Automation::Vars::deviceDetachName;
-	my $listName    =  $OVF::Automation::Vars::deviceListName;
+	my $listName      =  $OVF::Automation::Vars::deviceListName;
 	my $vmDeviceRegex = $OVF::Automation::Vars::vmDeviceRegex;
 	
 	# Validate correct set of arguments for this action.
@@ -396,7 +565,7 @@ sub device ( \% ) {
 		}
 	}
 	
-	handleUseError( \@useError );
+	return $status if ( handleUseError( \@useError ) );
 	
 	my $devDetail = '';
 	
@@ -460,11 +629,14 @@ sub device ( \% ) {
 				}
 				logMessage( $action, $vmName, 'warning', 'warning', qq{NO DEVICE LABELED ($vmDeviceName) FOUND} ) if ( !$deviceMatched );
 			}
+			$status = 1;
 		}
 	}
 	Util::disconnect();
-	logMessage( $action, $vmName, 'info', 'success', undef ); # Success if this far without throwing warning or error.
+	logMessage( $action, $vmName, 'info', 'success', undef ) if ( $status );
 	logMessage( $action, $vmName, 'info', undef, qq{END} );
+	
+	return $status;
 
 }
 
@@ -491,6 +663,7 @@ sub snapshot ( \% ) {
 	my $revertToName        = 0;
 	my $destroyByName       = 0;
 	my $destroyAll          = 0;
+	my $status              = 0;
 	
 	my @useError;
 	
@@ -504,7 +677,7 @@ sub snapshot ( \% ) {
 	}
 	push ( @useError, validateVcenterArguments( \%options ) );
 	push ( @useError, validateVmName( \$vmName, \%options ) );
-	handleUseError( \@useError );
+	return $status if ( handleUseError( \@useError ) );
 		
 	if ( $operation eq $snapshotRevertName ) {
 		my $snapTo;
@@ -573,14 +746,16 @@ sub snapshot ( \% ) {
 					$vm->RevertToCurrentSnapshot();
 				};
 				logMessage( $action, $vmName, getVIRuntimeEvalStatus( $@ ) );
+				$status = 1 if ( (getVIRuntimeEvalStatus( $@ ))[0] ne 'err' );				
 			}
 		} elsif ( $revertToName ) {
 			( $snapshotOk, $snapshotRef ) = validateSnapshot( $action, $vmName, $vm, $snapshotName );
 			if ( $snapshotOk and defined $snapshotRef ) {
 				eval {
 					$snapshotRef->RevertToSnapshot();
-				};
+				};				
 				logMessage( $action, $vmName, getVIRuntimeEvalStatus( $@ ) );
+				$status = 1 if ( (getVIRuntimeEvalStatus( $@ ))[0] ne 'err' );
 			}
 		} elsif ( $destroyByName ) {
 			( $snapshotOk, $snapshotRef ) = validateSnapshot( $action, $vmName, $vm, $snapshotName );
@@ -591,6 +766,7 @@ sub snapshot ( \% ) {
 					$snapshotRef->RemoveSnapshot( removeChildren => 1 );
 				};
 				logMessage( $action, $vmName, getVIRuntimeEvalStatus( $@ ) );
+				$status = 1 if ( (getVIRuntimeEvalStatus( $@ ))[0] ne 'err' );
 			}
 		} elsif ( $destroyAll ) {
 			( $snapshotOk, $snapshotRef ) = validateSnapshot( $action, $vmName, $vm, undef );
@@ -599,6 +775,7 @@ sub snapshot ( \% ) {
 					$vm->RemoveAllSnapshots();
 				};
 				logMessage( $action, $vmName, getVIRuntimeEvalStatus( $@ ) );
+				$status = 1 if ( (getVIRuntimeEvalStatus( $@ ))[0] ne 'err' );
 			}
 		} else {
 			eval {
@@ -608,10 +785,13 @@ sub snapshot ( \% ) {
 									quiesce => $snapshotQuiesce);
 			};
 			logMessage( $action, $vmName, getVIRuntimeEvalStatus( $@ ) );
+			$status = 1 if ( (getVIRuntimeEvalStatus( $@ ))[0] ne 'err' );
 		}
 	}
 	Util::disconnect();
 	logMessage( $action, $vmName, 'info', undef, qq{END} );
+	
+	return $status;
 	
 }
 
@@ -872,6 +1052,7 @@ sub connectDevice ( $$$$$ ) {
 	my $connect      = shift;
 	
 	my $thisSubName = ( caller( 0 ) )[ 3 ];
+	my $status      = 0;
 
 	$action = $thisSubName if ( !defined $action );
 	if ( !defined $actionDetail ) {
@@ -888,8 +1069,9 @@ sub connectDevice ( $$$$$ ) {
 			$vm->ReconfigVM(spec => $spec);
 		};
 		logMessage( $action, $actionDetail, getVIRuntimeEvalStatus( $@ ) );
+		$status = 1 if ( (getVIRuntimeEvalStatus( $@ ))[0] ne 'err' );
 	}
-	
+	return $status;
 }
 
 sub getVIRuntimeEvalStatus ( $ ) {
@@ -928,6 +1110,20 @@ sub getVIRuntimeEvalStatus ( $ ) {
 	
 }
 
+sub vmExists ( \% ) {
+	my ( %options ) = %{ ( shift ) };
+	my $vmName  = $options{'vmname'};
+	my $vcenter = $options{'vcenter'};
+	my $vcUser  = $options{'vcenteruser'};
+	my $vcPass  = $options{'vcenterpassword'};
+	Util::connect( getVIRuntimeUrl( %options ), $vcUser, $vcPass );
+	my $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'config.name' => $vmName});
+	if ( !defined $vm ) {
+		return 0;
+	}
+	return 1;
+}
+
 sub getVIRuntimeTaskStatus ( $ ) {
 	
 	my $taskRef = shift;
@@ -960,6 +1156,52 @@ sub getVIRuntimeTaskStatus ( $ ) {
 	return ( $priority, $status, $msg );
 	
 }
+
+sub getVcenterObjects( $$$$ ) {
+    my $cmd        = shift;
+    my $depth      = shift;
+    my $verbose    = shift;
+    my $deepObject = shift;    
+  	
+  	if ( !defined $cmd or !defined $depth or !defined $verbose ) {
+  	    return;
+  	}
+  	
+  	my @deepObjects;
+    my $format = ' ' x 2 . '|';
+  	
+  	$cmd .= qq{/"$deepObject"} if ( defined $deepObject );
+  	$depth++;
+  	
+  	print qq{DISCOVER COMMAND:\ndepth ($depth) $cmd\n} if ( $verbose );  	
+    
+    my @vcenterObjects = `$cmd`;
+	
+	# Print same level before diving deeper
+	foreach my $vobj ( @vcenterObjects ) {
+	    chomp( $vobj );
+	    # Ignore discover error
+	    if ( $vobj =~ /^Error:/ ) {
+	        next;
+	    }
+	    # Objects with '/' at the end have more to discover
+	    if ( $vobj =~ /^\s*([^\/]+)\/$/ ) {
+	        push( @deepObjects, $1 );	        
+	    } else {
+	        $vobj =~ s/^\s*//;	        
+            print $format x ( $depth - 1 ) . $vobj . "\n";
+        }
+    }
+    
+    foreach my $vobj ( @deepObjects ) {
+   	    if ( $depth != 1 ) {
+   	        print $format x ( $depth - 1) . '__';
+   	    }
+       	print "$vobj\n";
+	    # Call again with growing discovery objects
+	    getVcenterObjects( $cmd, $depth, $verbose, $vobj );
+	}   
+}  
 
 sub convertNames ( \% ) {
 
@@ -1188,9 +1430,9 @@ sub handleUseError( \@ ) {
 		foreach my $err ( @useError ) {
 			print STDERR "$err";
 		}
-		exit 166;
+		return 1;
 	}
-	
+	return 0;
 }
 
 sub logMessage ( $$$$$ ) {
@@ -1213,8 +1455,9 @@ sub logMessage ( $$$$$ ) {
 		Sys::Syslog::syslog( $priority, $log ) if ( $log );
 		if ( $priority eq 'err' or $priority eq 'warning' ) {
 			Sys::Syslog::syslog( 'info', qq{$logComplete : END} );
-			exit 167 if ( $priority eq 'warning' );
-			exit 168 if ( $priority eq 'err' );
+			return 1;
+		} else {
+			return 0;
 		}
 	}
 	
