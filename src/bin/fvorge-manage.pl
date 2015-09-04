@@ -19,10 +19,10 @@
 
 # Make bundled VMware packages LAST for unit tests; but not overriding system libs.
 BEGIN { push ( @INC, ( '/opt/fvorge/lib/perl', '../lib/perl' ) );
-	# To allow https connections with unverified SSL certs.
-	# From VMware: https://communities.vmware.com/message/2444510
-	$ENV{PERL_NET_HTTPS_SSL_SOCKET_CLASS} = "Net::SSL";
-	$ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
+    # To allow https connections with unverified SSL certs.
+    # From VMware: https://communities.vmware.com/message/2444510
+    $ENV{PERL_NET_HTTPS_SSL_SOCKET_CLASS} = "Net::SSL";
+    $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
 }
 
 use strict;
@@ -80,40 +80,44 @@ my $cluster;
 my $net;
 my $overwrite;
 my $verbose = 0;
+my $sslVerify = 0;
+my $ovaPackage;
 
 ## Getopts ----------------------------------------------
 Getopt::Long::GetOptions(
-	'help|h'                   => \$help,
-	'action|a=s'               => \$action,
-	'distribution|distro=s'    => \$distribution,
-	'major|maj=s'              => \$major,
-	'minor|min=s'              => \$minor,
-	'architecture|arch=s'      => \$architecture,
-	'group|g=i'                => \$group,
-	'instance|i=i'             => \$instance,
-	'vmname|vm=s'              => \$vmName,
-	'vcenter|vc=s'             => \$vcenterServer,
-	'vcenteruser|vcu=s'        => \$vcenterUser,
-	'vcenterpassword|vcp=s'    => \$vcenterPassword,
-	'datacenter|dc=s'          => \$dataCenter,
-	'sourceovf|sovf=s'         => \$sourceOvf,
-	'targethost|thost=s'       => \$targetHost,
-	'targetdatastore|tds=s'    => \$targetDatastore,
-	'diskmode|dm=s'            => \$diskMode,
-	'folder|f=s'               => \$vmFolder,
-	'cluster|c=s'              => \$cluster,
-	'net|n=s'                  => \$net,
-	'overwrite|o!'             => \$overwrite,
-	'isodatastore|isod=s'      => \$isoDatastore,
-	'isopath|isop=s'           => \$isoPath,
-	'vmdevice|vd=s'            => \$vmDevice,
-	'vmdevicename|vdn=s'       => \$vmDeviceName,
-	'propoverride|po=s'        => \$propertiesOverride,
-	'snapshotname|sn=s'        => \$snapshotName,
-	'snapshotdescription|sd=s' => \$snapshotDescription,
-	'snapshotmemory|sm!'       => \$snapshotMemory,
-	'snapshotquiesce|sq!'      => \$snapshotQuiesce,
-	'verbose|v!'               => \$verbose
+    'help|h'                   => \$help,
+    'action|a=s'               => \$action,
+    'distribution|distro=s'    => \$distribution,
+    'major|maj=s'              => \$major,
+    'minor|min=s'              => \$minor,
+    'architecture|arch=s'      => \$architecture,
+    'group|g=i'                => \$group,
+    'instance|i=i'             => \$instance,
+    'vmname|vm=s'              => \$vmName,
+    'vcenter|vc=s'             => \$vcenterServer,
+    'vcenteruser|vcu=s'        => \$vcenterUser,
+    'vcenterpassword|vcp=s'    => \$vcenterPassword,
+    'datacenter|dc=s'          => \$dataCenter,
+    'sourceovf|sovf=s'         => \$sourceOvf,
+    'targethost|thost=s'       => \$targetHost,
+    'targetdatastore|tds=s'    => \$targetDatastore,
+    'diskmode|dm=s'            => \$diskMode,
+    'folder|f=s'               => \$vmFolder,
+    'cluster|c=s'              => \$cluster,
+    'net|n=s'                  => \$net,
+    'overwrite|o!'             => \$overwrite,
+    'isodatastore|isod=s'      => \$isoDatastore,
+    'isopath|isop=s'           => \$isoPath,
+    'vmdevice|vd=s'            => \$vmDevice,
+    'vmdevicename|vdn=s'       => \$vmDeviceName,
+    'propoverride|po=s'        => \$propertiesOverride,
+    'snapshotname|sn=s'        => \$snapshotName,
+    'snapshotdescription|sd=s' => \$snapshotDescription,
+    'snapshotmemory|sm!'       => \$snapshotMemory,
+    'snapshotquiesce|sq!'      => \$snapshotQuiesce,
+    'verbose|v!'               => \$verbose,
+    'sslverify!'               => \$sslVerify,
+    'ovapackage|op=s'          => \$ovaPackage
 ) or pod2usage( -verbose => 1, -exitstatus => 2 );
 
 pod2usage( -verbose => 3, -exitstatus => 0 ) if $help;
@@ -147,6 +151,8 @@ $options{snapshotdescription} = $snapshotDescription;
 $options{snapshotmemory}      = $snapshotMemory;
 $options{snapshotquiesce}     = $snapshotQuiesce;
 $options{verbose}             = $verbose;
+$options{sslverify}           = $sslVerify;
+$options{ovapackage}          = $ovaPackage;
 
 my $actionRegex   = $OVF::Automation::Vars::actionRegex;
 my $powerRegex    = $OVF::Automation::Vars::powerRegex;
@@ -154,9 +160,11 @@ my $deviceRegex   = $OVF::Automation::Vars::deviceRegex;
 my $snapshotRegex = $OVF::Automation::Vars::snapshotRegex;
 my $deployName    = $OVF::Automation::Vars::deployName;
 my $destroyName   = $OVF::Automation::Vars::destroyName;
+my $exportName    = $OVF::Automation::Vars::exportName;
+my $discoverName  = $OVF::Automation::Vars::discoverName;
 
 if ( !defined $action or $action !~ /^($actionRegex)$/ ) {
-	push( @useError, "--action $actionRegex required\n" );
+    push( @useError, "--action $actionRegex required\n" );
 }
 
 OVF::Automation::Module::handleUseError( @useError );
@@ -165,22 +173,44 @@ OVF::Automation::Module::handleUseError( @useError );
 # the envirionment variables.
 setVcenterCredentials( \%options );
 
-OVF::Automation::Module::deploy( %options )  if ( $action =~ /^$deployName$/ );
-OVF::Automation::Module::destroy( %options ) if ( $action =~ /^$destroyName$/ );
-OVF::Automation::Module::power( %options ) if ( $action =~ /^($powerRegex)$/ );
-OVF::Automation::Module::device( %options ) if ( $action =~ /^($deviceRegex)$/ );
-OVF::Automation::Module::snapshot( %options ) if ( $action =~ /^($snapshotRegex)$/ );
+my $status = undef;
+$status = OVF::Automation::Module::deploy( %options )
+    if ( $action =~ /^$deployName$/ );
+$status = OVF::Automation::Module::destroy( %options )
+    if ( $action =~ /^$destroyName$/ );
+$status = OVF::Automation::Module::power( %options )
+    if ( $action =~ /^($powerRegex)$/ );
+$status = OVF::Automation::Module::device( %options )
+    if ( $action =~ /^($deviceRegex)$/ );
+$status = OVF::Automation::Module::snapshot( %options )
+    if ( $action =~ /^($snapshotRegex)$/ );
+$status = OVF::Automation::Module::export( %options )
+    if ( $action =~ /^$exportName$/ );
+$status = OVF::Automation::Module::discover( %options )
+    if ( $action =~ /^$discoverName$/ );
+
+if ( $status ) {
+    exit 0;
+} else {
+    exit 1;
+}
 
 sub setVcenterCredentials( \% ) {
 
-	# Set VMware vCenter details from $ENV environment variables if not provided
-	# from the command line options.
-	
-	my $optionsRef = shift;
+    # Set VMware vCenter details from $ENV environment variables if not provided
+    # from the command line options.
+    
+    my $optionsRef = shift;
 
-	$optionsRef->{'vcenter'} = $ENV{'FVORGE_VCENTER'} if ( !defined $optionsRef->{'vcenter'} and defined $ENV{'FVORGE_VCENTER'} );
-	$optionsRef->{'vcenteruser'} = $ENV{'FVORGE_VCENTERUSER'} if ( !defined $optionsRef->{'vcenteruser'} and defined $ENV{'FVORGE_VCENTERUSER'} );
-	$optionsRef->{'vcenterpassword'} = $ENV{'FVORGE_VCENTERPASSWORD'} if ( !defined $optionsRef->{'vcenterpassword'} and defined $ENV{'FVORGE_VCENTERPASSWORD'} );
+    $optionsRef->{'vcenter'} = $ENV{'FVORGE_VCENTER'}
+        if ( !defined $optionsRef->{'vcenter'}
+            and defined $ENV{'FVORGE_VCENTER'} );
+    $optionsRef->{'vcenteruser'} = $ENV{'FVORGE_VCENTERUSER'}
+        if ( !defined $optionsRef->{'vcenteruser'}
+            and defined $ENV{'FVORGE_VCENTERUSER'} );
+    $optionsRef->{'vcenterpassword'} = $ENV{'FVORGE_VCENTERPASSWORD'}
+        if ( !defined $optionsRef->{'vcenterpassword'}
+            and defined $ENV{'FVORGE_VCENTERPASSWORD'} );
 
 }
 
@@ -194,17 +224,51 @@ FVORGE Manage OVF and Virtual Machines
 
 =head1 SYNOPSIS
 
-FVORGE Manage B<deploys> or B<destroys> VMware OVF/OVA appliances in the VMware environment and manages other lifecyles for the VMware Virtual Guest.
+FVORGE Manage B<deploys> or B<destroys> VMware OVF/OVA appliances in the VMware
+environment and manages other lifecyles for the VMware Virtual Guest.
 
-VM lifecycles include B<power> operations, B<snapshot> operations and B<attach> or B<detach> of connectable devices and ISO images.
+VM lifecycles include B<power> operations, B<snapshot> operations and B<attach>
+or B<detach> of connectable devices and ISO images.
 
-VMware vCenter details and VM guest name are B<I<required>> for all management operations and actions. See B<I<REQUIRED>> section.
+VMware vCenter details and VM guest name are B<I<required>> for all management
+operations and actions. See B<I<REQUIRED>> section.
+
+=head2 DISCOVER
+
+=over 4
+
+=item fvorge-manage B<--action|-a>=I<discover> I<REQUIRED>
+
+Discover the objects for a given vCenter Server environment.
+
+=back
+
+=head2 EXPORT
+
+=over 4
+
+=item fvorge-manage B<--action|-a>=I<export> I<REQUIRED> [--folder|-f=<NAME>]
+B<--ovapackage|-op>=I<PACAKGE_PATH_NAME>>
+
+The ovapackage is the path B<and> OVA package name for the exported vm OVA.
+eg. /tmp/vm12.ova If no path provided, the export will abort. It will not save
+to the current working directory unless explicit as by ./vm12.ova
+
+The vm must be in a poweredOff state to perform an OVA export.
+
+=back
 
 =head2 DEPLOY
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<deploy> I<REQUIRED> B<--sourceovf|-sovf>=I<URL> B<--datacenter|-dc>=I<NAME> B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME> [--cluster|-c=I<NAME>] [--net|n=I<SOURCE_NAME=TARGET_NAME>[;S=T[;S=T]] [--overwrite|-o] [--propoverride|-po=I<FILE|ovfprop=ovfvalue[;;;ovfprop=ovfvalue]>] [--diskmode|-dm=I<thin>] [--folder|-f=<NAME>]
+=item fvorge-manage B<--action|-a>=I<deploy> I<REQUIRED>
+<B<--sourceovf|-sovf>=I<URL> B<--datacenter|-dc>=I<NAME>
+B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME>
+[--cluster|-c=I<NAME>] [--net|n=I<SOURCE_NAME=TARGET_NAME>[;S=T[;S=T]]
+[--overwrite|-o]
+[--propoverride|-po=I<FILE|"ovfprop"="ovfvalue"[;;;"ovfprop=ovfvalue"]]>
+[--diskmode|-dm=I<thin>] [--folder|-f=<NAME>]
 
 =back
 
@@ -220,7 +284,8 @@ VMware vCenter details and VM guest name are B<I<required>> for all management o
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<poweron|poweroff|suspend|reset|reboot|shutdown> I<REQUIRED>
+=item fvorge-manage B<--action|-a>=I<poweron|poweroff|suspend|reset|reboot|shutdown>
+I<REQUIRED>
 
 =back
 
@@ -230,7 +295,9 @@ VMware vCenter details and VM guest name are B<I<required>> for all management o
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<snapshot> I<REQUIRED> [--snapshotname|-sn=I<NAME>] [--snapshotdescription|-sd=I<NAME>] [--snapshotmemory|-sm] [--snapshotquiesce|-sq]
+=item fvorge-manage B<--action|-a>=I<snapshot> I<REQUIRED>
+[--snapshotname|-sn=I<NAME>] [--snapshotdescription|-sd=I<NAME>]
+[--snapshotmemory|-sm] [--snapshotquiesce|-sq]
 
 =back
 
@@ -238,9 +305,11 @@ VMware vCenter details and VM guest name are B<I<required>> for all management o
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<snapshot-revert> I<REQUIRED> [--snapshotname|-sn=I<NAME>]
+=item fvorge-manage B<--action|-a>=I<snapshot-revert> I<REQUIRED>
+[--snapshotname|-sn=I<NAME>]
 
-If B<--snapshotname> I<not> provided the VM guest will revert to the most B<recent> snapshot.
+If B<--snapshotname> I<not> provided the VM guest will revert to the most
+B<recent> snapshot.
 
 =back
 
@@ -248,9 +317,11 @@ If B<--snapshotname> I<not> provided the VM guest will revert to the most B<rece
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<snapshot-destroy> I<REQUIRED> [--snapshotname|-sn=I<NAME>]
+=item fvorge-manage B<--action|-a>=I<snapshot-destroy> I<REQUIRED>
+[--snapshotname|-sn=I<NAME>]
 
-If B<--snapshotname> I<not> provided the VM guest will destroy B<all> snapshots. B<Child snapshots will be destroyed>.
+If B<--snapshotname> I<not> provided the VM guest will destroy B<all> snapshots.
+B<Child snapshots will be destroyed>.
 
 =back
 
@@ -262,7 +333,8 @@ If B<--snapshotname> I<not> provided the VM guest will destroy B<all> snapshots.
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<attach> I<REQUIRED> B<--vmdevice|-vd>=I<connectable> B<--vmdevicename|-vdn>=I<NAME>
+=item fvorge-manage B<--action|-a>=I<attach> I<REQUIRED>
+B<--vmdevice|-vd>=I<connectable> B<--vmdevicename|-vdn>=I<NAME>
 
 =back
 
@@ -270,7 +342,8 @@ If B<--snapshotname> I<not> provided the VM guest will destroy B<all> snapshots.
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<detach> I<REQUIRED> B<--vmdevice|-vd>=I<connectable> B<--vmdevicename|-vdn>=I<NAME>
+=item fvorge-manage B<--action|-a>=I<detach> I<REQUIRED>
+B<--vmdevice|-vd>=I<connectable> B<--vmdevicename|-vdn>=I<NAME>
 
 =back
 
@@ -278,17 +351,20 @@ If B<--snapshotname> I<not> provided the VM guest will destroy B<all> snapshots.
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<list> I<REQUIRED> B<--vmdevice|-vd>=I<connectable>
+=item fvorge-manage B<--action|-a>=I<list>
+I<REQUIRED> B<--vmdevice|-vd>=I<connectable>
 
 =back
 
 =head3 ISO
-	
+    
 =head4 ATTACH
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<attach> I<REQUIRED> B<--vmdevice|-vd>=I<iso> B<--isodatastore|-isod>=I<NAME> B<--isopath|-isop>=I<FILE>
+=item fvorge-manage B<--action|-a>=I<attach> I<REQUIRED>
+B<--vmdevice|-vd>=I<iso> B<--isodatastore|-isod>=I<NAME>
+B<--isopath|-isop>=I<FILE>
 
 =back
 
@@ -310,11 +386,13 @@ If B<--snapshotname> I<not> provided the VM guest will destroy B<all> snapshots.
 
 =head1 REQUIRED
 
-VMware vCenter details and VM guest name are B<I<required>> for all management operations and actions.
+VMware vCenter details and VM guest name are B<I<required>> for all management
+operations and actions.
 
 =head3 VMware vCenter SERVER and CREDENTIALS
 
-VMware vCenter server and credentials my be provided via command line options I<and/or> environment variables.
+VMware vCenter server and credentials my be provided via command line options
+I<and/or> environment variables.
 
 =head4 COMMAND LINE
 
@@ -342,7 +420,8 @@ VMware vCenter server and credentials my be provided via command line options I<
 
 =head3 VM Guest NAME
 
-A VM guest name may be provided via B<--vmname|-vm> I<VM_Guest_Name> I<or> it may be B<derived> from distribution details. See B<OPTIONS:DERIVE VM Guest NAME>
+A VM guest name may be provided via B<--vmname|-vm> I<VM_Guest_Name> I<or> it
+may be B<derived> from distribution details. See B<OPTIONS:DERIVE VM Guest NAME>
 
 =head1 OPTIONS
 
@@ -352,25 +431,30 @@ A VM guest name may be provided via B<--vmname|-vm> I<VM_Guest_Name> I<or> it ma
 
 Print help and exit.
 
-=item B<--action|-a> deploy|destroy|poweron|poweroff|suspend|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
+=item B<--action|-a>
+discover|deploy|destroy|export|poweron|poweroff|suspend|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
 
 Action to perform.
 
 =item B<--vcenter|-vc> VCENTER_SERVER
 
-B<REQUIRED> for all operations and actions. The VMware vCenter Server host to connect.
+B<REQUIRED> for all operations and actions. The VMware vCenter Server host to
+connect.
 
 =item B<--vcenteruser|-vcu> USERNAME
 
-B<REQUIRED> for all operations and actions. The VMware vCenter Server username with adequate privileges.
+B<REQUIRED> for all operations and actions. The VMware vCenter Server username
+with adequate privileges.
 
 =item B<--vcenterpassword|-vcp> PASSWORD
 
-B<REQUIRED> for all operations and actions. The VMware vCenter Server username password.
+B<REQUIRED> for all operations and actions. The VMware vCenter Server username
+password.
 
 =item B<--vmname|-vm> NAME
 
-B<REQUIRED> for all operations and actions. If I<not> provided it will be B<derived> from distribution details. See B<OPTIONS:DERIVE VM Guest NAME>
+B<REQUIRED> for all operations and actions. If I<not> provided it will be
+B<derived> from distribution details. See B<OPTIONS:DERIVE VM Guest NAME>
 
 =item B<--datacenter|-dc> NAME
 
@@ -386,47 +470,72 @@ The VMWare ESX Host Datastore name.
 
 =item B<--diskmode|-dm> thin
 
-The disk mode to use when deploying an OVF/OVA appliances vmdk disk. If I<not> provided the default is B<thin>.
+The disk mode to use when deploying an OVF/OVA appliances vmdk disk. If I<not>
+provided the default is B<thin>.
 
 =item B<--cluster|-c> NAME
 
-The VMware ESX Cluster name in the Datacenter. Only required if B<--targethost> is in a named cluster.
+The VMware ESX Cluster name in the Datacenter. Only required if B<--targethost>
+is in a named cluster.
 
 =item B<--net|-n> SOURCE_NAME=TARGET_NAME[;S=T[;S=T]]
 
-The VMware ESX Network to associate each VM guest network interface. Optional if there is only one defined network. If more than one network and I<not> provided the first network is assigned. Example: I<VM Network=VM Network - 1G>
+The VMware ESX Network to associate each VM guest network interface. Optional
+if there is only one defined network. If more than one network and I<not>
+provided the first network is assigned. Example: I<VM Network=VM Network - 1G>
 
 =item B<--folder|-f> NAME
 
-The VMware Datacenter Folder to assign the VM guest. If provided the Folder B<must> exist. It will not be created.
+The VMware Datacenter Folder to assign the VM guest. If provided the Folder
+B<must> exist. It will not be created.
+
+=item B<--ovapackage|-op>=I<PACAKGE_PATH_NAME>>
+
+The ovapackage is the path B<and> OVA package name for the exported vm OVA.
+eg. /tmp/vm12.ova If no path provided, the export will abort. It will not save
+to the current working directory unless explicit as by ./vm12.ova
 
 =item B<--overwrite|-o>
 
-Deploying an OVF/OVA will not overwrite an existing guest by the same name. Enable this option to overwrite an existing VM guest of the same name.
+Deploying an OVF/OVA will not overwrite an existing guest by the same name.
+Enable this option to overwrite an existing VM guest of the same name.
 
 =item B<--propoverride|-po> FILE
 
-The file path to override an OVF/OVA's defined properties. All properties enumerated in the file must exist in the OVF/OVA's defined properties. See B<OVF PROPERTIES OVERRIDE>.
+The file path to override an OVF/OVA's defined properties. All properties
+enumerated in the file must exist in the OVF/OVA's defined properties.
+See B<OVF PROPERTIES OVERRIDE>.
 
 =item B<--snapshotname|-sn> NAME
 
-The name to assign a snapshot. If I<not> provided the current date and time will be used.
+The name to assign a snapshot. If I<not> provided the current date and time will
+be used.
 
 =item B<--snapshotdescription|-sd> NAME
 
-The description for a snapshot. If I<not> provided the snapshot description will be 'FVORGE AUTOMATION'.
+The description for a snapshot. If I<not> provided the snapshot description will
+be 'FVORGE AUTOMATION'.
 
 =item B<--snapshotmemory|-sm>
 
-If provided and the state of the VM guest is B<poweredOn> then the memory state will be included with the snapshot.
+If provided and the state of the VM guest is B<poweredOn> then the memory state
+will be included with the snapshot.
 
 =item B<--snapshotquiesce|-sq>
 
-If provided and the state of the VM guest is B<poweredOn> then the system will be quiesced for the snapshot.
+If provided and the state of the VM guest is B<poweredOn> then the system will
+be quiesced for the snapshot.
+
+=item B<--sslverify>
+
+If provided will prompt to verify the ssl connection to the vCenter Server.
+Default is to skip the ssl verification.
 
 =item B<--vmdevice|-vd> iso|connectable
 
-The VM guest device to perform an action=list|attach|detach. If I<iso> and the VM guest state is B<poweredOn> then the guest may have a lock on the CD/DVD device and may present a lock warning in the vCenter Server GUI.
+The VM guest device to perform an action=list|attach|detach. If I<iso> and the
+VM guest state is B<poweredOn> then the guest may have a lock on the
+CD/DVD device and may present a lock warning in the vCenter Server GUI.
 
 =item B<--vmdevicename|-vdn> NAME
 
@@ -448,7 +557,9 @@ Will produce more command details during execution.
 
 =head2 OVF PROPERTIES OVERRIDE
 
-A file should contain OVF properties B<matching> the properties defined in the OVF/OVA. The overriding properties should be in the following format with each property=value on a newline. Commented lines begin with B<#>.
+A file should contain OVF properties B<matching> the properties defined in the
+OVF/OVA. The overriding properties should be in the following format with each
+property=value on a newline. Commented lines begin with B<#>.
 
 =head3 FORMAT
 
@@ -466,7 +577,8 @@ A file should contain OVF properties B<matching> the properties defined in the O
 
 =over 4
 
-=item "host"="distribution=Ubuntu major=14 minor=04 architecture=x86_64 cluster=900 instance=10"
+=item "host"="distribution=Ubuntu major=14 minor=04 architecture=x86_64
+cluster=900 instance=10"
 
 =item "host.time.zone"="US/Eastern"
 
@@ -500,11 +612,13 @@ Distribution of the type B<RHEL|CentOS|ORAL|SLES|Ubuntu>
 
 =item B<--major|-maj>
 
-A string value matching the distribution major number. Ubuntu 14.04 x86_64 B<major> value is 14.
+A string value matching the distribution major number. Ubuntu 14.04 x86_64
+B<major> value is 14.
 
 =item B<--minor|-min>
 
-A string value matching the distribution minor number. Ubuntu 14.04 x86_64 B<minor> value is 04.
+A string value matching the distribution minor number. Ubuntu 14.04 x86_64
+B<minor> value is 04.
 
 =item B<--architecture|-arch>
 
@@ -520,7 +634,9 @@ Arbitrary instance integer from B<0-99>.
 
 =item Example:
 
-Ubuntu 14.04 x86_64 is -distro Ubuntu -maj 14 -min 04 -arch x86_64 -group 100 -i 1 and the derived B<--vmname> becomes B<Ubuntu-14.04-x86_64-100-1> A derived name is most useful when performing batch operations. See I<fvorge-minions>.
+Ubuntu 14.04 x86_64 is -distro Ubuntu -maj 14 -min 04 -arch x86_64 -group 100
+-i 1 and the derived B<--vmname> becomes B<Ubuntu-14.04-x86_64-100-1> A derived
+name is most useful when performing batch operations. See I<fvorge-minions>.
 
 
 =back
