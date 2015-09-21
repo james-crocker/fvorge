@@ -30,6 +30,7 @@ use strict;
 
 use Tie::File;
 use Fcntl 'O_RDONLY';
+use URI::Escape;
 
 use lib '../../../perl';
 use OVF::Automation::Vars;
@@ -81,7 +82,8 @@ sub discover ( \% ) {
     # Create the first OVFTOOL discover cmd at the 'root'
     my $discoverCmd = qq{$ovftool};
     $discoverCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
-    $discoverCmd .= qq{ vi://"$vcUser":"$vcPass"\@"$vcenter"};
+    $discoverCmd .= qq{ vi://"} . uriEscape( $vcUser ) . q{":"}
+        . uriEscape( $vcPass ) . qq{"\@"$vcenter"};
     logMessage( $action, undef, 'info', undef, qq{BEGIN} );
     getVcenterObjects( $discoverCmd, 0, $options{'verbose'}, undef );
     logMessage( $action, undef, 'info', undef, qq{END} );
@@ -114,6 +116,8 @@ sub export ( \% ) {
     my $dataCenter      = $options{'datacenter'};
     my $vmFolder        = $options{'folder'};
     my $sslVerify       = $options{'sslverify'};
+    
+
 
     # Validate correct set of arguments for this action.
     push ( @useError, validateVcenterArguments( \%options ) );
@@ -173,7 +177,8 @@ sub export ( \% ) {
 
     $exportCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
 
-    $exportCmd .= qq{ vi://"$vcUser":"$vcPass"\@"$vcenter"/"$dataCenter"/vm/$vmFolder"$vmName" '$ovaPackage'};
+    $exportCmd .= qq{ vi://"} . uriEscape( $vcUser ) . q{":"}
+        . uriEscape( $vcPass ) . qq{"\@"$vcenter"/"$dataCenter"/vm/$vmFolder"$vmName" '$ovaPackage'};
 
     $exportCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
     print qq{EXPORT COMMAND:\n$exportCmd\n} if ( $options{'verbose'} );
@@ -334,7 +339,8 @@ sub deploy ( \% ) {
         }
     }
     $deployCmd .= qq{ \\\n$sourceOvf};
-    $deployCmd .= qq{ \\\nvi://"$vcUser":"$vcPass"\@"$vcenter"/"$dataCenter"/host/$cluster"$targetHost"};
+    $deployCmd .= qq{ \\\nvi://"} . uriEscape( $vcUser ) . q{":"}
+        . uriEscape( $vcPass ) . qq{"\@"$vcenter/"$dataCenter"/host/$cluster"$targetHost"};
     $deployCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
     print qq{DEPLOY COMMAND:\n$deployCmd\n} if ( $options{'verbose'} );
     if ( system ( $deployCmd ) == 0 ) {
@@ -1198,6 +1204,15 @@ sub getVcenterObjects( $$$$ ) {
         # Call again with growing discovery objects
         getVcenterObjects( $cmd, $depth, $verbose, $vobj );
     }
+}
+
+sub uriEscape ( $ ) {
+    # ovftool needs escaped elements in cases where domain is included
+    # eg. steeleye\jcrocker or in complex passwords
+    
+    my $string = shift;
+    
+    return uri_escape( $string );
 }
 
 sub convertNames ( \% ) {
