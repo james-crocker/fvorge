@@ -82,8 +82,8 @@ sub discover ( \% ) {
     # Create the first OVFTOOL discover cmd at the 'root'
     my $discoverCmd = qq{$ovftool};
     $discoverCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
-    $discoverCmd .= qq{ vi://"} . uriEscape( $vcUser ) . q{":"}
-        . uriEscape( $vcPass ) . qq{"\@"$vcenter"};
+    $discoverCmd .= qq{ vi://} . uriEscape( $vcUser ) . q{:}
+        . uriEscape( $vcPass ) . q{\@} . uriEscape( $vcenter );
     logMessage( $action, undef, 'info', undef, qq{BEGIN} );
     getVcenterObjects( $discoverCmd, 0, $options{'verbose'}, undef );
     logMessage( $action, undef, 'info', undef, qq{END} );
@@ -165,7 +165,7 @@ sub export ( \% ) {
 
     # If in a folder set it for inclusion in the url.
     if ( defined $vmFolder ) {
-        $vmFolder = qq{"$vmFolder"/};
+        $vmFolder = uriEscape( $vmFolder ) . q{/};
     } else {
         $vmFolder = '';
     }
@@ -177,8 +177,10 @@ sub export ( \% ) {
 
     $exportCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
 
-    $exportCmd .= qq{ vi://"} . uriEscape( $vcUser ) . q{":"}
-        . uriEscape( $vcPass ) . qq{"\@"$vcenter"/"$dataCenter"/vm/$vmFolder"$vmName" '$ovaPackage'};
+    $exportCmd .= qq{ vi://} . uriEscape( $vcUser ) . q{:}
+        . uriEscape( $vcPass ) . q{\@} . uriEscape( $vcenter ) . q{/}
+        . uriEscape( $dataCenter ) . qq{/vm/$vmFolder}
+        . uriEscape( $vmName ) . qq{ '$ovaPackage'};
 
     $exportCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
     print qq{EXPORT COMMAND:\n$exportCmd\n} if ( $options{'verbose'} );
@@ -321,7 +323,7 @@ sub deploy ( \% ) {
 
     # If in a cluster set it for inclusion in the url.
     if ( defined $cluster ) {
-        $cluster = qq{"$cluster"/};
+        $cluster = uriEscape( $cluster ) . q{/};
     } else {
         $cluster = '';
     }
@@ -339,8 +341,10 @@ sub deploy ( \% ) {
         }
     }
     $deployCmd .= qq{ \\\n$sourceOvf};
-    $deployCmd .= qq{ \\\nvi://"} . uriEscape( $vcUser ) . q{":"}
-        . uriEscape( $vcPass ) . qq{"\@"$vcenter/"$dataCenter"/host/$cluster"$targetHost"};
+    $deployCmd .= qq{ \\\nvi://} . uriEscape( $vcUser ) . q{:}
+        . uriEscape( $vcPass ) . q{\@} . uriEscape( $vcenter ) . q{/}
+        . uriEscape( $dataCenter ) . qq{/host/$cluster}
+        . uriEscape( $targetHost );
     $deployCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
     print qq{DEPLOY COMMAND:\n$deployCmd\n} if ( $options{'verbose'} );
     if ( system ( $deployCmd ) == 0 ) {
