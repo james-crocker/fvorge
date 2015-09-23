@@ -439,7 +439,7 @@ may be B<derived> from distribution details. See B<OPTIONS:DERIVE VM Guest NAME>
 Print help and exit.
 
 =item B<--action|-a>
-discover|deploy|destroy|export|poweron|poweroff|suspend|powerstate|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
+discover|deploy|destroy|export|poweron|poweroff|suspend|poweredon|poweredoff|suspended|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
 
 Action to perform.
 
