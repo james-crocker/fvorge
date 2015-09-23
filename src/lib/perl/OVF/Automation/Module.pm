@@ -390,8 +390,11 @@ sub destroy ( \% ) {
         $status = 0;
     } else {
         my $task_ref = $vm->Destroy_Task();
-        logMessage( $action, $vmName, getVIRuntimeTaskStatus($task_ref) );
-        $status = 1;
+        my ( $priority, $state, $msg ) = getVIRuntimeTaskStatus($task_ref);
+        logMessage( $action, $vmName, $priority, $state, $msg );
+        if ( $state eq 'success' ) {
+            $status = 1;
+        }
     }
     Util::disconnect();
     logMessage( $action, $vmName, 'info', undef, qq{END} );
@@ -432,80 +435,134 @@ sub power ( \% ) {
     logMessage( $action, $vmName, 'info', undef, qq{BEGIN} );
     Util::connect( getVIRuntimeUrl( \%options ), $vcUser, $vcPass );
     my $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'config.name' => $vmName});
-    # status = 0 for all until set 1
+
     if ( !defined $vm ) {
-        logMessage( $action, $vmName, 'warning', 'warning', qq{UNABLE TO LOCATE VM ($vmName) AT VCENTER ($vcenter)} );
+        logMessage( $action, $vmName, 'err', 'error', qq{UNABLE TO LOCATE VM ($vmName) AT VCENTER ($vcenter)} );
     } else {
         my $state = $vm->runtime->powerState->val;
-        # power on
-        if ( $op eq $OVF::Automation::Vars::powerOnName ) {
-            if ( $state ne 'poweredOff' && $state ne 'suspended' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
-                $vm->PowerOnVM();
+        # powered on
+        if ( $op eq $OVF::Automation::Vars::poweredOnName ) {
+        	if ( $state =~ /^$OVF::Automation::Vars::poweredOnName$/ios ) {
+        		$status = 1;
+        	}
+        }
+        # powered off
+        elsif ( $op eq $OVF::Automation::Vars::poweredOffName ) {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOffName$/ios ) {
                 $status = 1;
+            }
+        }
+        # suspended
+        elsif ( $op eq $OVF::Automation::Vars::suspendedName ) {
+            if ( $state =~ /^$OVF::Automation::Vars::suspendedName$/ios ) {
+                $status = 1;
+            }
+        }
+        # power on
+        elsif ( $op eq $OVF::Automation::Vars::powerOnName ) {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOffName$/ios
+                or $state =~ /^$OVF::Automation::Vars::suspendedName$/ios ) {
+                $vm->PowerOnVM();
+                $status = powerStateAchieved( $OVF::Automation::Vars::poweredOnName, \%options );
             }
         }
         # reset
         elsif ( $op eq $OVF::Automation::Vars::resetName ) {
-            if ( $state ne 'poweredOn' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOnName$/ios ) {
                 $vm->ResetVM();
-                $status = 1;
-            }
-        }
-        # standby
-        elsif ( $op eq $OVF::Automation::Vars::standbyName ) {
-            if ( $state ne 'poweredOn' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
-                $vm->StandbyGuest();
-                $status = 1;
+                $status = powerStateAchieved( $OVF::Automation::Vars::poweredOnName, \%options );
             }
         }
         # power off
         elsif ( $op eq $OVF::Automation::Vars::powerOffName ) {
-            if ( $state ne 'poweredOn' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOnName$/ios ) {
                 $vm->PowerOffVM();
-                $status = 1;
+                $status = powerStateAchieved( $OVF::Automation::Vars::poweredOffName, \%options );
             }
         }
         # suspend
         elsif ( $op eq $OVF::Automation::Vars::suspendName ) {
-            if ( $state ne 'poweredOn' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOnName$/ios ) {
                 $vm->SuspendVM();
-                $status = 1;
+                $status = powerStateAchieved( $OVF::Automation::Vars::suspendedName, \%options );
             }
         }
         # shutdown
         elsif ( $op eq $OVF::Automation::Vars::shutdownName ) {
-            if ( $state ne 'poweredOn' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOnName$/ios ) {
                 $vm->ShutdownGuest();
-                $status = 1;
+                $status = powerStateAchieved( $OVF::Automation::Vars::poweredOffName, \%options );
             }
         }
         # reboot
         elsif ( $op eq $OVF::Automation::Vars::rebootName ) {
-            if ( $state ne 'poweredOn' ) {
-                logMessage( $action, $vmName, 'warning', 'warning', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state)} );
-            } else {
+            if ( $state =~ /^$OVF::Automation::Vars::poweredOnName$/ ) {
                 $vm->RebootGuest();
-                $status = 1;
+                $status = powerStateAchieved( $OVF::Automation::Vars::poweredOnName, \%options );
             }
         }
+        
+        if ( $status ) {
+            logMessage( $action, $vmName, 'info', 'success', undef );
+        } else {
+            logMessage( $action, $vmName, 'err', 'error', qq{OPERATION NOT SUPPORTED FOR CURRENT STATE ($state); OPERATION FAILED or NOT IN EXPECTED STATE} );
+        }
+        
     }
-    logMessage( $action, $vmName, 'info', 'success', undef );
+
     Util::disconnect();
     logMessage( $action, $vmName, 'info', undef, qq{END} );
 
     return $status;
+
+}
+
+sub powerStateAchieved ( $\% ) {
+	
+	# Must 'reconnect' since the change in powerState is not updated
+	# for the current vm object
+	
+    my $expectedPowerState = shift;
+    my %options            = %{ ( shift ) };
+    
+    my $vmName  = $options{'vmname'};
+    my $vcenter = $options{'vcenter'};
+    my $vcUser  = $options{'vcenteruser'};
+    my $vcPass  = $options{'vcenterpassword'};
+    my $url     = getVIRuntimeUrl( \%options );
+
+    my $thisSubName        = ( caller( 0 ) )[ 3 ];
+    my $action             = $thisSubName;
+    
+    my $waitTime           = 60;
+    my $waitCount          = 2;
+
+    Util::disconnect();
+    Util::connect( $url, $vcUser, $vcPass );
+    my $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'config.name' => $vmName});
+    
+    my $count = 0;
+    if ( defined $vm ) {
+        if ( $vm->runtime->powerState->val =~ /^$expectedPowerState$/ios) {
+        	Util::disconnect();
+        	return 1;
+        } else {
+            while ( $count < $waitCount ) {
+                Util::disconnect();
+                sleep $waitTime;
+                Util::connect( $url, $vcUser, $vcPass );
+                $vm = Vim::find_entity_view(view_type => 'VirtualMachine', filter =>{ 'config.name' => $vmName});
+                if ( $vm->runtime->powerState->val =~ /^$expectedPowerState$/ios ) {
+                    Util::disconnect();
+                    return 1;
+                }
+                $count++;
+            }
+        }
+    }
+
+    Util::disconnect();
+    return 0;
 
 }
 
