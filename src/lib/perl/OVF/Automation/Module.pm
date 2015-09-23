@@ -177,10 +177,11 @@ sub export ( \% ) {
 
     $exportCmd .= qq{ $ovftoolNoSslVerify} if ( !$sslVerify );
 
+    # $vmFolder is already uriEscaped
     $exportCmd .= qq{ vi://} . uriEscape( $vcUser ) . q{:}
         . uriEscape( $vcPass ) . q{\@} . uriEscape( $vcenter ) . q{/}
-        . uriEscape( $dataCenter ) . q{/vm/} . uriEscape( $vmFolder )
-        . uriEscape( $vmName ) . qq{ '$ovaPackage'};
+        . uriEscape( $dataCenter ) . q{/vm/$vmFolder} . uriEscape( $vmName )
+        . qq{ '$ovaPackage'};
 
     $exportCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
     print qq{EXPORT COMMAND:\n$exportCmd\n} if ( $options{'verbose'} );
@@ -341,9 +342,10 @@ sub deploy ( \% ) {
         }
     }
     $deployCmd .= qq{ \\\n$sourceOvf};
+    # $cluster is already uriEscaped
     $deployCmd .= qq{ \\\nvi://} . uriEscape( $vcUser ) . q{:}
         . uriEscape( $vcPass ) . q{\@} . uriEscape( $vcenter ) . q{/}
-        . uriEscape( $dataCenter ) . qq{/host/} . uriEscape( $cluster )
+        . uriEscape( $dataCenter ) . qq{/host/$cluster}
         . uriEscape( $targetHost );
     $deployCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
     print qq{DEPLOY COMMAND:\n$deployCmd\n} if ( $options{'verbose'} );
