@@ -284,8 +284,15 @@ B<--targethost|-thost>=I<NAME> B<--targetdatastore|-tds>=I<NAME>
 
 =over 4
 
-=item fvorge-manage B<--action|-a>=I<poweron|poweroff|suspend|reset|reboot|shutdown>
+=item fvorge-manage B<--action|-a>=I<poweron|poweroff|suspend|reset|reboot|shutdown|poweredon|poweredoff|suspended>
 I<REQUIRED>
+
+Power operations are power state dependent. eg. A vm which is currently
+poweredOff can't conduct suspend, reset, shutdown or reboot operations; an error
+will be logged and a return status of 0 returned; 1 otherwise.
+
+B<poweredon>, B<poweredoff>, B<suspended> will return 1 if the vm is in that
+powerstate; 0 otherwise.
 
 =back
 
@@ -432,7 +439,7 @@ may be B<derived> from distribution details. See B<OPTIONS:DERIVE VM Guest NAME>
 Print help and exit.
 
 =item B<--action|-a>
-discover|deploy|destroy|export|poweron|poweroff|suspend|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
+discover|deploy|destroy|export|poweron|poweroff|suspend|poweredon|poweredoff|suspended|reset|reboot|shutdown|snapshot|snapshot-revert|snapshot-destroy|attach|detatch|list
 
 Action to perform.
 
