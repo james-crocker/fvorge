@@ -180,7 +180,7 @@ sub export ( \% ) {
     # $vmFolder is already uriEscaped
     $exportCmd .= qq{ vi://} . uriEscape( $vcUser ) . q{:}
         . uriEscape( $vcPass ) . q{\@} . uriEscape( $vcenter ) . q{/}
-        . uriEscape( $dataCenter ) . q{/vm/$vmFolder} . uriEscape( $vmName )
+        . uriEscape( $dataCenter ) . qq{/vm/$vmFolder} . uriEscape( $vmName )
         . qq{ '$ovaPackage'};
 
     $exportCmd .= qq{ $quietCmd} if ( !$options{'verbose'} );
