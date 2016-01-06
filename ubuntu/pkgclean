@@ -1,0 +1,6 @@
+#!/bin/bash
+# clean up package contents
+TARGET=$1
+[ ! -d $TARGET ] && echo "Invalid target dir: '$TARGET'" && exit 1
+rm -rf $TARGET/opt/fvorge
+rm -rf $TARGET/opt

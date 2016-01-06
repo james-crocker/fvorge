@@ -1,0 +1,8 @@
+Package: fvorge
+Section: admin
+Priority: extra
+Maintainer: SIOS Technology Corp.
+Version: %VERSION%
+Architecture: all
+Depends: perl, perl-doc, libswitch-perl, cracklib-runtime
+Description: OVF configuration utility

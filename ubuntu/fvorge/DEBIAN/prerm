@@ -1,0 +1,2 @@
+update-rc.d -f fvorge remove
+rm /opt/fvorge/sbin/fvorge

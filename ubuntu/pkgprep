@@ -1,0 +1,7 @@
+#!/bin/bash
+# copy package contents in, in preparation for packaging
+TARGET=$1
+[ ! -d $TARGET ] && echo "Invalid target dir: '$TARGET'" && exit 1
+SOURCE=../src
+mkdir -p $TARGET/opt/fvorge
+cp -a $SOURCE/* $TARGET/opt/fvorge/
